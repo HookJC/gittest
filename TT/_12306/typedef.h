@@ -250,6 +250,7 @@ typedef struct _QUERY_DATA_TRAIN
 	ushort bsubmit;							// 能否预订
 	ushort bstart;							// 始发站
 	ushort bend;							// 终点站
+	char sztrain_nos[MAX_PHONE_LEN + 1];	// 车次代码
 	char sztrain_no[MAX_TRAIN_NO + 1];		// 车次 
 	char szstartcity[MAX_CITY_LEN + 1];		// 发站
 	char szstarttime[MAX_TIME_LEN + 1];		// 发站时间

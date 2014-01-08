@@ -30,7 +30,7 @@ CLoginRequest::CLoginRequest()
 	m_chreqsocket.addmap("Connection", "keep-alive");
 	m_chreqsocket.addmap("Accept-Language", "zh-cn");
 	m_chreqsocket.addmap("Referer", "https://kyfw.12306.cn/otn/login/init");
-	m_chreqsocket.addmap("Content-Type", "application/x-www-form-urlencoded");
+	m_chreqsocket.addmap("Content-Type", "application/x-www-form-urlencoded"); /*; charset=GBK */
 	m_chreqsocket.addmap("User-Agent", "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727)");
 	m_chreqsocket.addmap("Cache-Control", "no-cache");
 	m_chreqsocket.addmap("Host", "kyfw.12306.cn");

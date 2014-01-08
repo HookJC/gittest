@@ -100,7 +100,8 @@ string strerrorfile = "\\error.txt";
 string strinifile = "\\参数配置.ini";
 string stralterapp = "RightDownNotify.exe";
 const char* pszloginimg = "/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand&0."; // 登陆验证码
-const char* pszpasgeimg = "/otsweb/passCodeNewAction.do?module=passenger&rand=randp&"; // 订票验证码
+const char* pszpasgeimg = "/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&0."; // 订票验证码
+const char* pszautoimgpath = "/otn/passcodeNew/getPassCodeNew.do?module=login&rand=sjrand&0."; // 自动提交订单
 const char* pszseattext[] = {"商务座", "特等座", "一等座", "二等座", "高级软卧","软卧", "硬卧", "软座", "硬座", "无座", "其他"}; // 座席
 const char* pszseattype[] = {"9", "P", "M", "O", "", "4", "3", "2", "1", "1", ""}; // 座席代号
 const char* pszpassenger[] = {"成人票", "儿童票", "学生票", "残军票"}; // 1|2|3|4
@@ -747,6 +748,7 @@ UINT CGetTicketDlg::GetTickets(LPVOID lpVoid)
 	string strret;
 	string strack;
 	string strtmp;
+	string strtoken;
 	char sztmp[MAX_BUFFER_BLOCK + 1] = {0};
 
 	CGetTicketDlg* pt = (CGetTicketDlg* )lpVoid;
@@ -821,7 +823,28 @@ while (pt->m_bRunning)
 	}
 
 	// 后续处理异常
-
+	/*if (strack == "-10")
+	{
+		// 重新登陆
+		AfxMessageBox("您还没有登录或者离开页面的时间过长，请登录系统或者刷新页面");
+		pt->alertexit();
+	}
+	if (strack == "-1")
+	{
+		AfxMessageBox("服务器忙，加载查询数据失败！");	
+		continue;
+	}
+	else if (strack.substr(0, 2) == "-2")
+	{
+		pt->AddInfo(strack.substr(3).c_str());
+		write_to_file(strerrorfile, strack);
+		continue;
+	}
+	else
+	{
+		strack = str_replace(strack, "&nbsp;", "");
+		strack = str_replace(strack, "<br>", ",");
+	}*/
 
 	// 正常流程
 	QUERY_DATA_LIST stqtrains;
@@ -834,6 +857,9 @@ while (pt->m_bRunning)
 		{
 			jlistitem = jlist[i]["queryLeftNewDTO"];
 			++stqtrains.uscount;
+			
+			strncpy(stqtrains.stlist[i].sztrain_nos, jlistitem["train_no"].asCString(), MAX_TRAIN_NO); //
+
 			strncpy(stqtrains.stlist[i].sztrain_no, jlistitem["station_train_code"].asCString(), MAX_TRAIN_NO); // 
 			
 			strncpy(stqtrains.stlist[i].szstartcity, jlistitem["from_station_name"].asCString(), MAX_CITY_LEN); // 
@@ -879,126 +905,25 @@ while (pt->m_bRunning)
 			}
 			pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].bsubmit ? "Y" : "N");
 		}
-	}
 
-	if (1)
-	{
-		continue;
+		pt->AddInfo("共查询到%d车次", stqtrains.uscount);
 	}
-	
-
-	/*if (strack == "-10")
-	{
-		// 重新登陆
-		AfxMessageBox("您还没有登录或者离开页面的时间过长，请登录系统或者刷新页面");
-		pt->alertexit();
-	}
-	if (strack == "-1")
-	{
-		AfxMessageBox("服务器忙，加载查询数据失败！");	
-		continue;
-	}
-	else if (strack.substr(0, 2) == "-2")
-	{
-		pt->AddInfo(strack.substr(3).c_str());
-		write_to_file(strerrorfile, strack);
-		continue;
-	}
-	else
-	{
-		strack = str_replace(strack, "&nbsp;", "");
-		strack = str_replace(strack, "<br>", ",");
-	}*/
-
-	// -- begin 填充字段 --
-	/*int itraincount = 0;
-	vector<string> vectraininfo;
-	QUERY_DATA_LIST stqtrains;
-	memset(&stqtrains, 0, sizeof(stqtrains));
-	itraincount = str_explode(strack, "\\n", vectraininfo);
-	if (itraincount > 0)
-	{
-		//printf("车次 (始)发站(时间) (终)到站(时间) 历时 商务座 特等座 一等座 二等座 高级软卧 软卧 硬卧 软座 硬座 无座 其他 购票\n");
-		vector<string> vectrain;
-		for (i = 0; i < itraincount && i < MAX_LOAD_DATA; ++i)
-		{
-			vectrain.clear();
-			j = str_explode(vectraininfo[i], ",", vectrain);
-			if (j < 19) continue;
-			++stqtrains.uscount;
-			strncpy(stqtrains.stlist[i].sztrain_no, getmidstr(vectrain[1], "onStopOut()'>", "<").c_str(), MAX_TRAIN_NO);
-			if (vectrain[2][0] == '<') // 发站
-			{
-				stqtrains.stlist[i].bstart = 1;
-				strncpy(stqtrains.stlist[i].szstartcity, vectrain[2].substr(vectrain[2].find(">") + 1).c_str(), MAX_CITY_LEN);
-			}
-			else
-			{
-				strncpy(stqtrains.stlist[i].szstartcity, vectrain[2].c_str(), MAX_CITY_LEN);
-			}
-			strncpy(stqtrains.stlist[i].szstarttime, vectrain[3].c_str(), MAX_TIME_LEN);
-			if (vectrain[4][0] == '<') // 到站
-			{
-				stqtrains.stlist[i].bend = 1;
-				strncpy(stqtrains.stlist[i].szendcity, vectrain[4].substr(vectrain[4].find(">") + 1).c_str(), MAX_CITY_LEN);
-			}
-			else
-			{
-				strncpy(stqtrains.stlist[i].szendcity, vectrain[4].c_str(), MAX_CITY_LEN);
-			}
-			strncpy(stqtrains.stlist[i].szendtime, vectrain[5].c_str(), MAX_TIME_LEN);
-			strncpy(stqtrains.stlist[i].szusetime, vectrain[6].c_str(), MAX_TIME_LEN);
-			m =  6 + TRAIN_TICKET_TYPE;
-			for (n = m - TRAIN_TICKET_TYPE + 1, k = 0; n <= m; ++n, ++k) // 票务信息
-			{
-				j = vectrain[n][0];
-				if (j == '-')
-				{
-					strcpy(stqtrains.stlist[i].szTicket[k], "--");
-				}
-				else if (j == '<') //<font color='#008800'>有</font>,<font color='darkgray'>无</font>
-				{
-					strcpy(stqtrains.stlist[i].szTicket[k], getmidstr(vectrain[n], ">", "<").c_str());
-				}
-				else
-				{
-					strncpy(stqtrains.stlist[i].szTicket[k], vectrain[n].c_str(), TICKET_SIGN_LEN);
-				}
-			}
-			if (vectrain[n].find("onclick") != string::npos) // 本车次可否订票
-			{
-				stqtrains.stlist[i].bsubmit = 1;
-				strncpy(stqtrains.stlist[i].szsubmitcode, getmidstr(vectrain[n], "getSelected('", "')").c_str(), SUBMIT_CODE_LEN);
-			}
-
-			// 车次 (始)衡阳(09:00) (终)深圳(19:00) 历时 商务座 特等座 一等座 二等座 高级软卧 软卧 硬卧 软座 硬座 无座 其他 购票
-			printf("%5s %s%-6s(%s) %s%-6s(%s) %s"
-				, stqtrains.stlist[i].sztrain_no
-				, stqtrains.stlist[i].bstart ? "(始)" : "    "
-				, stqtrains.stlist[i].szstartcity
-				, stqtrains.stlist[i].szstarttime
-				, stqtrains.stlist[i].bend ? "(终)" : "    "
-				, stqtrains.stlist[i].szendcity
-				, stqtrains.stlist[i].szendtime
-				, stqtrains.stlist[i].szusetime);
-			for (n = 0; n < TRAIN_TICKET_TYPE; ++n)
-			{
-				printf(" %2s", stqtrains.stlist[i].szTicket[n]);
-			}
-			if (stqtrains.stlist[i].bsubmit)
-			{
-				printf(" 订票");
-			}
-			printf("\n"); //						
-		}
-	}*/
-	// -- end 填充字段 --
-
 	// 显示滚动条
 	if (stqtrains.uscount > MAX_TICKET_LENGTHS)
 	{
 		pt->m_listTicket.ShowScrollBar(SB_VERT, TRUE);
 	}	
+		
+	if (1)
+	{
+		continue;
+	}
+	
+	if (pt->m_bRunning == FALSE)
+	{
+		break;
+	}	
+	
 
 	// 有车次数据
 	if (stqtrains.uscount > 0)
@@ -1044,68 +969,146 @@ while (pt->m_bRunning)
 		}
 		if (i != stqtrains.uscount)
 		{
-			// 匹配到车次或者查询到有票，转入预定页面
-			vector<string> getorder;			
-			n = sizeof(pszorderparam)/sizeof(char*);
-			m = str_explode(stqtrains.stlist[i].szsubmitcode, "#", getorder);
-			// if (m < n) 14个必要参数
-			cmap.clear();
-			cmap.cmd(_12306_PREPARE_ORDER_DATA);
-			for (j = 0; j < m; ++j)
-			{
-				cmap.set(pszorderparam[j], getorder[j]);
+			// 自动提交
+			// 输入验证码
+			time_t tm_current = time(NULL);
+			time_t tm_space = tm_current;
+
+			strtmp = str_format("secretStr=%s&train_date=%s&tour_flag=dc&purpose_codes=%s"
+					"&query_from_station_name=%s&query_to_station_name=%s&&cancel_flag=2"
+					"&bed_level_order_num=000000000000000000000000000000"
+					"&passengerTicketStr=%s,0,%d,%s,%s,%s,%s,Y"
+					"&oldPassengerStr=%s,%s,%s,1_"
+					, stqtrains.stlist[i].szsubmitcode, startdate.c_str(), includeStudent.c_str()
+					, startcity.c_str(), endcity.c_str()
+					, pszseattype[usselseat], pt->m_nTicketType, pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode, pt->m_strMobile
+					, pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode);
+			strtmp = CHandleCode::GBKToUTF8(strtmp);
+			strack = "";
+			while (strack.empty())
+			{			
+				creq->http_post("/otn/confirmPassenger/autoSubmitOrderRequest", strtmp, strack);
 			}
-			string strsc = stqtrains.stlist[i].szstartcity;
-			string strec = stqtrains.stlist[i].szendcity;
-			cmap["train_date"] = startdate;
-			cmap["seattype_num"] = "";
-			cmap["include_student"] = includeStudent;
-			cmap["from_station_telecode_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strsc));
-			cmap["to_station_telecode_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strec));
-			cmap["round_train_date"] = startdate;
-			cmap["round_start_time_str"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(startTime));
-			cmap["single_round_type"] = "1"; // 单程
-			cmap["train_pass_type"] = trainPassType;
-			cmap["train_class_arr"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(trainClass));
-			cmap["start_time_str"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(startTime));
-			cmap["lishi"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["lishi"]));
-			cmap["train_start_time"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["train_start_time"]));
-			cmap["arrive_time"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["arrive_time"]));
-			cmap["from_station_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strsc));
-			cmap["to_station_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strec));
-			cmap["mmStr"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["mmStr"]));
-			cmap["NTEzODczOQ%3D%3D"] = "NTI4MDE0MWVjMTZmY2YxOQ%3D%3D";
-			cmap["myversion"] = "undefined";
-			strtmp = str_format("station_train_code=%s&train_date=%s&seattype_num=&from_station_telecode=%s"
-				"&to_station_telecode=%s&include_student=%s&from_station_telecode_name=%s&to_station_telecode_name=%s"
-				"&round_train_date=%s&round_start_time_str=%s&single_round_type=%s&train_pass_type=%s"
-				"&train_class_arr=%s&start_time_str=%s&lishi=%s&train_start_time=%s"
-				"&trainno4=%s&arrive_time=%s&from_station_name=%s&to_station_name=%s"
-				"&from_station_no=%s&to_station_no=%s&ypInfoDetail=%s"
-				"&mmStr=%s"
-				"&locationCode=%s"
-				, cmap["station_train_code"].c_str(), cmap["train_date"].c_str(), cmap["from_station_telecode"].c_str()
-				, cmap["to_station_telecode"].c_str(), includeStudent.c_str(), cmap["from_station_telecode_name"].c_str(), cmap["to_station_telecode_name"].c_str()
-				, cmap["round_train_date"].c_str(), cmap["round_start_time_str"].c_str(), cmap["single_round_type"].c_str(), cmap["train_pass_type"].c_str()
-				, cmap["train_class_arr"].c_str(), cmap["start_time_str"].c_str(), cmap["lishi"].c_str(), cmap["train_start_time"].c_str()
-				, cmap["trainno4"].c_str(), cmap["arrive_time"].c_str(), cmap["from_station_name"].c_str(), cmap["to_station_name"].c_str()
-				, cmap["from_station_no"].c_str(), cmap["to_station_no"].c_str(), cmap["ypInfoDetail"].c_str()
-				, cmap["mmStr"].c_str()
-				, cmap["locationCode"].c_str());
-			//std::cout << strtmp << std::endl;
-			cmap["data"] = strtmp;
-			iret = creq->parse(cmap, strack);
-			//write_to_file(g_strapppath + "\\submitOrder.html", strack, false);
-			pt->AddInfo("跳转订票页面【%s】", strack.empty() ? "成功" : "失败");
-			
-			// 跳转预定页面
-			cmap.cmd(_12306_PASSENGER_ACTION_INIT);			
-			iret = creq->parse(cmap, strack);
-			if (strack.empty())
+			if (!jread.parse(strack, jvalue))
 			{
-				pt->AddInfo("加载订票页面失败");
+				pt->AddInfo("自动订票请求失败");
 				continue;
 			}
+
+			if (!jvalue["data"].isNull() && !jvalue["data"]["result"])
+			{
+				strtoken = jvalue["data"]["result"];
+			}
+			if (strtoken.empty())
+			{
+				pt->AddInfo("自动订票请求返回数据异常");
+				continue;
+			}
+
+			string strtriandate;
+			string strpassenger;
+			string stroldpassenger;
+			vector<string> VecTok;
+			str_explode(strtoken, "#", VecTok);
+				
+			// train_date=Wed+Jan+8+17%3A33%3A21+UTC%2B0800+2014&
+			strtmp = str_format("train_no=%s&stationTrainCode=%s&seatType=%s"
+				"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=%s&purpose_codes=%s&_json_att="
+				, stqtrains.stlist[i].sztrain_nos, stqtrains.stlist[i].sztrain_no, pszseattype[usselseat]
+				, startcitycode.c_str(), endcitycode.c_str(), VecTok[2].c_str(), includeStudent);
+			strack = "";
+			while (strack.empty())
+			{
+				creq->http_post("/otn/confirmPassenger/getQueueCountAsync", strtmp, strack);
+			}
+			// {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"count":"25","ticket":"O007450376M0099500619019950015","op_2":"false","countT":"0","op_1":"true"},"messages":[],"validateMessages":{}}
+			
+			tm_space = time(NULL);
+			icount = 0;
+			do
+			{	
+				++icount > 1 ? pt->AddInfo("验证码错误，请重新输入") : "";
+				pt->OnBtnRcode(); // 获取验证码
+				WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
+				if (!pt->m_bRunning) // 此票不满意，重新刷票，需要退出线程
+				{
+					pt->AddInfo("退出刷票");
+					return 0;
+				}
+				
+				// 效验验证码
+				strack = "";
+				while (strack.empty())
+				{
+					strtmp = str_format("randCode=%s&rand=sjrand&_json_att=&REPEAT_SUBMIT_TOKEN=%s"
+						, pt->m_strRCode, strtoken.c_str());
+					creq->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strtmp, strack);
+					_sleep(100);
+				}				
+			}while (strack.find("\"data\":\"Y\"") == string::npos);
+
+			// /otn/confirmPassenger/confirmSingleForQueueAsys
+			strtmp = str_format("passengerTicketStr=%s%%2C0%%2C%d%%2C%s%%2C%s%%2C%s%%2C%s%%2CY"
+				"&"
+				, pszseattype[usselseat], pt->m_nTicketType, CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(pt->m_strName)), "1"/*证件类型：身份证*/, pt->m_strVerifyCode, pt->m_strMobile):
+			strack = "";
+			while (strack.empty())
+			{
+				creq->http_post("/otn/confirmPassenger/confirmSingleForQueueAsys", strtmp, strack);
+			}
+
+
+
+			/*strtmp = str_format("secretStr=%s&train_date=%s&back_train_date=%s&tour_flag=dc&purpose_codes=%s&query_from_station_name=%s&query_to_station_name=%s&undefined"
+				, stqtrains.stlist[i].szsubmitcode, startdate.c_str(), startdate.c_str(), includeStudent.c_str(), stqtrains.stlist[i].szstartcity, stqtrains.stlist[i].szendcity);
+			creq->http_post("/otn/leftTicket/submitOrderRequest", strtmp, strack);
+			if (strack.empty() || (jread.parse(strack, jvalue) && !jvalue["status"].asBool()))
+			{
+				pt->AddInfo("点击预定失败");
+				continue;
+			}
+
+			creq->http_post("/otn/confirmPassenger/initDc", "_json_att=", strack);
+			if (strack.empty() || (strtoken = getmidstr(strack, "globalRepeatSubmitToken = '", "'")).empty())
+			{
+				pt->AddInfo("获取预定页面异常");
+				continue;
+			}
+
+			// 输入验证码
+			time_t tm_current = time(NULL);
+			time_t tm_space = tm_current;
+
+			tm_space = time(NULL);
+			icount = 0;
+			do
+			{	
+				++icount > 1 ? pt->AddInfo("验证码错误，请重新输入") : "";
+				pt->OnBtnRcode(); // 获取验证码
+				WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
+				if (!pt->m_bRunning) // 此票不满意，重新刷票，需要退出线程
+				{
+					pt->AddInfo("退出刷票");
+					return 0;
+				}
+
+				// 效验验证码
+				strack = "";
+				while (strack.empty())
+				{
+					strtmp = str_format("randCode=%s&rand=randp&_json_att=&REPEAT_SUBMIT_TOKEN=%s"
+					, pt->m_strRCode, strtoken.c_str());
+					creq->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strtmp, strack);
+					_sleep(100);
+				}				
+			}while (strack.find("\"data\":\"Y\"") == string::npos)
+			// continue submit second times after success.
+			
+			//train_date=Wed+Jan+8+00:00:00+UTC+0800+2014
+			strtmp = str_format("train_date=%s&train_no=%s&stationTrainCode=%s&seatType=%d"
+			"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=O007450413M0099500599019950014&purpose_codes=00&_json_att=&REPEAT_SUBMIT_TOKEN=%s")*/
+			
+
 			
 			// 提取 strack 内容, 打印票务信息: 实时变化的仅作参考
 			strret = getmidstr(strack, "<table", "</table>"); // 票源信息
@@ -1161,9 +1164,7 @@ while (pt->m_bRunning)
 			cmap["passenger_1_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["passenger_1_name"]));
 			cmap["oldPassengers"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["oldPassengers"]));	
 
-			// 预定页面开始订票程序
-			time_t tm_current = time(NULL);
-			time_t tm_space = tm_current;
+			// 预定页面开始订票程序			
 			do 
 			{
 				do
@@ -1404,7 +1405,7 @@ void CGetTicketDlg::OnBtnRcode()
 	bool bget = false;
 	do
 	{
-		if (bget = creq->GetVertifyImg(pszpasgeimg, strRCodePath))
+		if (bget = creq->GetVertifyImg(pszautoimgpath, strRCodePath))
 		{
 			AddInfo("获取验证码成功：请输入验证码！");			
 			break;

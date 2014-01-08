@@ -81,12 +81,8 @@ BOOL CLoginDlg::OnInitDialog()
 		creq_->SetSession(m_strSession);
 		string strret;
 		creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
-		if (strret.find(strfixuserinfo) == string::npos)
-		{
-			AfxMessageBox("未对此账号授权，请联系开发人员");
-		}
-		else
-		{
+		if (strret.find(strfixuserinfo) != string::npos)
+		{			
 			SetTimer(2, 100, NULL);
 			return TRUE;
 		}		
