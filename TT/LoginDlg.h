@@ -18,6 +18,8 @@ class CLoginDlg : public CDialog
 public:
 	CLoginDlg(CWnd* pParent = NULL);   // standard constructor
 
+	string m_strSession;
+
 // Dialog Data
 	//{{AFX_DATA(CLoginDlg)
 	enum { IDD = IDD_LOGIN_DIALOG };

@@ -279,6 +279,11 @@ string CLoginRequest::GetSession()
 	return m_chreqsocket.getval("Cookie");
 }
 
+void CLoginRequest::SetSession(const string& strsess)
+{
+	m_chreqsocket.addmap("Cookie", strsess);
+}
+
 void CLoginRequest::CleanSession()
 {
 	m_chreqsocket.remove_key("Cookie");

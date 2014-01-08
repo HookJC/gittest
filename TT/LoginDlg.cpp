@@ -66,12 +66,32 @@ BOOL CLoginDlg::OnInitDialog()
 	SetWindowText(("订票工具 - " + strfixuserinfo).c_str());	
 	m_cbtn.SubclassWindow(GetDlgItem(IDC_BTN_RCODE)->m_hWnd);	
 
-	char sztmp[100] = {0};
-	CMemory_Conf::instance()->get_conf_str("配置", "用户名", "", sztmp, 100);
+	char sztmp[1024 + 1] = {0};
+	CMemory_Conf::instance()->get_conf_str("配置", "用户名", "", sztmp, 1024);
 	m_strUserName = sztmp;
-	CMemory_Conf::instance()->get_conf_str("配置", "密码", "", sztmp, 100);
+	CMemory_Conf::instance()->get_conf_str("配置", "密码", "", sztmp, 1024);
 	m_strPassWord = sztmp;
 	UpdateData(FALSE);
+
+	CMemory_Conf::instance()->get_conf_str("配置", "Cookie", "", sztmp, 1024);	
+	// 尝试使用保存的session查询个人信息
+	if (strcmp(sztmp, "") != 0)
+	{
+		m_strSession = sztmp;
+		creq_->SetSession(m_strSession);
+		string strret;
+		creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
+		if (strret.find(strfixuserinfo) == string::npos)
+		{
+			AfxMessageBox("未对此账号授权，请联系开发人员");
+		}
+		else
+		{
+			SetTimer(2, 100, NULL);
+			return TRUE;
+		}		
+	}
+
 
 	AfxBeginThread(ThreadLoadInit, this);
 
@@ -201,13 +221,11 @@ BOOL CLoginDlg::LoginTicket()
 	Json::Reader jread;
 	Json::Value jvalue;
 	
-	//SetWindowText("获取登陆权限....");
+
 	SetWindowText("验证验证码....");
 	do
-	{		
-		strret = creq_->GetCheckVertify(m_strRCode);		
-		strret = CSocketHTTPRequest::getbody(strret);
-		//cout << "登陆序号：\n" << strret<< endl;
+	{	strret = str_format("randCode=%s&rand=sjrand", m_strRCode);
+		creq_->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strret, strret);
 		if (jread.parse(strret, jvalue))
 		{
 			if (jvalue["data"].asString() == "Y")
@@ -237,9 +255,21 @@ BOOL CLoginDlg::LoginTicket()
 	SetWindowText("登陆中...");
 	m_bLogin = TRUE;
 
-	string strack = str_format("loginUserDTO.user_name=%s&userDTO.password=%s&randCode=%s"
-		, m_strUserName, m_strPassWord, m_strRCode);
-	strret = creq_->GetLoginReturn("/otn/login/loginAysnSuggest", strack, "");
+	// second check verifycode
+	strret = str_format("randCode=%s&rand=sjrand", m_strRCode);
+	creq_->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strret, strret);
+	
+	strret = "";
+	
+	// login 
+	while (strret.empty())
+	{	
+		string strack = str_format("loginUserDTO.user_name=%s&userDTO.password=%s&randCode=%s"
+			, m_strUserName, m_strPassWord, m_strRCode);	
+		creq_->http_post("/otn/login/loginAysnSuggest", strack, strret);
+		_sleep(100);
+	}
+
 	//write_to_file(g_strapppath +"\\loginAction.htm", CSocketHTTPRequest::getbody(strret), false);	
 	m_bLogin = FALSE;
 	if (strret.find("{\"loginCheck\":\"Y\"}") != string::npos)
@@ -255,6 +285,8 @@ BOOL CLoginDlg::LoginTicket()
 		}		
 		CMemory_Conf::instance()->write_conf_str("配置", "用户名", m_strUserName);
 		CMemory_Conf::instance()->write_conf_str("配置", "密码", m_strPassWord);
+		m_strSession = creq_->GetSession();
+		CMemory_Conf::instance()->write_conf_str("配置", "Cookie", m_strSession.c_str());
 		CMemory_Conf::instance()->save_conf();
 		return TRUE;
 	}
@@ -294,8 +326,18 @@ void CLoginDlg::OnChangeEditRcode()
 void CLoginDlg::OnTimer(UINT nIDEvent) 
 {
 	// TODO: Add your message handler code here and/or call default
-	LoginTicket();
-	SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-	KillTimer(1);
-	CDialog::OnTimer(nIDEvent);
+	if (nIDEvent == 1)
+	{
+		LoginTicket();
+		SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+		KillTimer(1);
+		CDialog::OnTimer(nIDEvent);
+		return;
+	}
+
+	if (nIDEvent == 2)
+	{
+		CDialog::OnOK();
+	}
+	
 }

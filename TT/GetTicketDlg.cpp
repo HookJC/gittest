@@ -129,7 +129,7 @@ string trainCodeText = ""; // 车次
 string train_no = ""; // 车次代号
 string trainPassType = "QB"; // 车路 : 全部|始发|过路
 string trainClass = "QB#D#Z#T#K#QT#"; // 车型：全部|动车|Z字头|T字头|K字头|其他
-string includeStudent = "00"; // 包含学生票
+string includeStudent = "ADULT"; // 包含学生票
 string seatTypeAndNum = ""; // 
 string startdate = ""; // 出发日期
 string startTime = "00:00--24:00";	// 出发时间
@@ -697,7 +697,7 @@ UINT CGetTicketDlg::GetPassernger(LPVOID lpVoid)
 	{
 		if (!jvalue["data"].isNull())
 		{
-			jlist = jvalue["datas"];
+			jlist = jvalue["data"]["datas"];
 			if (jlist.isArray())
 			{
 				pT->AddInfo("正在获取联系人....");
@@ -779,11 +779,9 @@ while (pt->m_bRunning)
 		, (trainCodeText.empty() ? "有车" : trainCodeText.c_str())
 		, pt->m_strName, pt->m_strVerifyCode
 		, (strseattext.empty() ? "有座" : strseattext.c_str())
-		, pt->m_nGetTicketTimes);	
-
-	pt->m_listTicket.DeleteAllItems();
-	pt->m_listTicket.ShowScrollBar(SB_VERT, FALSE);
-	cmap.clear();
+		, pt->m_nGetTicketTimes);
+	
+	/*cmap.clear();
 	cmap.cmd(_12306_LOAD_DATA);	
 	cmap["method"] = "qt"; // step 1
 	cmap["path"] = str_format("&orderRequest.train_date=%s&orderRequest.from_station_telecode=%s"
@@ -791,21 +789,105 @@ while (pt->m_bRunning)
 		"&includeStudent=%s&seatTypeAndNum=%s&orderRequest.start_time_str=%s"
 		, startdate.c_str(), startcitycode.c_str(), endcitycode.c_str(), train_no.c_str()
 		, trainPassType.c_str(), trainClass.c_str(), includeStudent.c_str(), seatTypeAndNum.c_str(), startTime.c_str());
-	iret = creq->parse(cmap, strack);
+	iret = creq->parse(cmap, strack);*/
+
+	strtmp = str_format("/otn/leftTicket/query?leftTicketDTO.train_date=%s&leftTicketDTO.from_station=%s&leftTicketDTO.to_station=%s&purpose_codes=%s"
+		, startdate.c_str(), startcitycode.c_str(), endcitycode.c_str(), includeStudent.c_str());
+	iret = creq->http_get(strtmp, strack);
+	
 	//write_to_file(g_strapppath + "\\qt.html", strack, false);	
 	
-	if (strack.empty())
+	/*if (strack.empty())
 	{
 		cmap["method"] = "queryLeftTicket"; // step 2
 		iret = creq->parse(cmap, strack);
-	}
+	}*/
 	//write_to_file(g_strapppath + "\\queryLeftTicket.html", strack, false);
+	
+	pt->m_listTicket.DeleteAllItems();
+	pt->m_listTicket.ShowScrollBar(SB_VERT, FALSE);
+
 	if (strack.empty())
 	{
 		pt->AddInfo("未查询到任何信息，请检查查询条件是否正确");
 		continue;
 	}
-	if (strack == "-10")
+
+	// parse json data
+	if (!jread.parse(strack, jvalue))
+	{
+		pt->AddInfo("查询数据异常");
+		continue;
+	}
+
+	// 后续处理异常
+
+
+	// 正常流程
+	QUERY_DATA_LIST stqtrains;
+	memset(&stqtrains, 0, sizeof(stqtrains));
+	jlist = jvalue["data"];
+	if (jlist.isArray())
+	{		
+		icount = jlist.size();
+		for (i = 0; i < icount && i < MAX_LOAD_DATA; ++i)
+		{
+			jlistitem = jlist[i]["queryLeftNewDTO"];
+			++stqtrains.uscount;
+			strncpy(stqtrains.stlist[i].sztrain_no, jlistitem["station_train_code"].asCString(), MAX_TRAIN_NO); // 
+			
+			strncpy(stqtrains.stlist[i].szstartcity, jlistitem["from_station_name"].asCString(), MAX_CITY_LEN); // 
+			stqtrains.stlist[i].bstart = strcmp(jlistitem["start_station_name"].asCString(), jlistitem["from_station_name"].asCString()) == 0 ? 1 : 0; // 
+			strncpy(stqtrains.stlist[i].szstarttime, jlistitem["start_time"].asCString(), MAX_TIME_LEN); // 
+			
+			strncpy(stqtrains.stlist[i].szendcity, jlistitem["to_station_name"].asCString(), MAX_CITY_LEN); // 
+			stqtrains.stlist[i].bend = strcmp(jlistitem["end_station_name"].asCString(), jlistitem["to_station_name"].asCString()) == 0 ? 1 : 0; // 
+			strncpy(stqtrains.stlist[i].szendtime, jlistitem["arrive_time"].asCString(), MAX_TIME_LEN); // 
+
+			strncpy(stqtrains.stlist[i].szusetime, jlistitem["lishi"].asCString(), MAX_TIME_LEN); // 
+			
+			k = 0; // 
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["swz_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["tz_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["zy_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["ze_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["gr_num"].asCString());
+			
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["rw_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["yw_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["rz_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["yz_num"].asCString());
+			
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["wz_num"].asCString());
+			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["qt_num"].asCString());
+
+			if (stricmp("Y", jlistitem["canWebBuy"].asCString()) == 0)
+			{
+				stqtrains.stlist[i].bsubmit = 1;
+				strncpy(stqtrains.stlist[i].szsubmitcode, (jlist[i]["secretStr"]).asCString(), SUBMIT_CODE_LEN);
+			}
+
+			pt->m_listTicket.InsertItem(i, stqtrains.stlist[i].sztrain_no);
+			pt->m_listTicket.SetItemText(i, 1, str_format("%s%-6s(%s)", stqtrains.stlist[i].bstart ? "Y " : "  "
+				, stqtrains.stlist[i].szstartcity, stqtrains.stlist[i].szstarttime).c_str());
+			pt->m_listTicket.SetItemText(i, 2, str_format("%s%-6s(%s)", stqtrains.stlist[i].bend ? "Y " : "  "
+				, stqtrains.stlist[i].szendcity, stqtrains.stlist[i].szendtime).c_str());
+			pt->m_listTicket.SetItemText(i, 3, stqtrains.stlist[i].szusetime);
+			for (n = 0; n < TRAIN_TICKET_TYPE; ++n)
+			{
+				pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].szTicket[n]);
+			}
+			pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].bsubmit ? "Y" : "N");
+		}
+	}
+
+	if (1)
+	{
+		continue;
+	}
+	
+
+	/*if (strack == "-10")
 	{
 		// 重新登陆
 		AfxMessageBox("您还没有登录或者离开页面的时间过长，请登录系统或者刷新页面");
@@ -826,9 +908,10 @@ while (pt->m_bRunning)
 	{
 		strack = str_replace(strack, "&nbsp;", "");
 		strack = str_replace(strack, "<br>", ",");
-	}
+	}*/
 
-	int itraincount = 0;
+	// -- begin 填充字段 --
+	/*int itraincount = 0;
 	vector<string> vectraininfo;
 	QUERY_DATA_LIST stqtrains;
 	memset(&stqtrains, 0, sizeof(stqtrains));
@@ -906,26 +989,18 @@ while (pt->m_bRunning)
 			{
 				printf(" 订票");
 			}
-			printf("\n"); //*/
-
-			pt->m_listTicket.InsertItem(i, stqtrains.stlist[i].sztrain_no);
-			pt->m_listTicket.SetItemText(i, 1, str_format("%s%-6s(%s)", stqtrains.stlist[i].bstart ? "Y " : "  "
-				, stqtrains.stlist[i].szstartcity, stqtrains.stlist[i].szstarttime).c_str());
-			pt->m_listTicket.SetItemText(i, 2, str_format("%s%-6s(%s)", stqtrains.stlist[i].bend ? "Y " : "  "
-				, stqtrains.stlist[i].szendcity, stqtrains.stlist[i].szendtime).c_str());
-			pt->m_listTicket.SetItemText(i, 3, stqtrains.stlist[i].szusetime);
-			for (n = 0; n < TRAIN_TICKET_TYPE; ++n)
-			{
-				pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].szTicket[n]);
-			}
-			pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].bsubmit ? "Y" : "N");			
+			printf("\n"); //						
 		}
-	}
+	}*/
+	// -- end 填充字段 --
+
+	// 显示滚动条
 	if (stqtrains.uscount > MAX_TICKET_LENGTHS)
 	{
 		pt->m_listTicket.ShowScrollBar(SB_VERT, TRUE);
 	}	
 
+	// 有车次数据
 	if (stqtrains.uscount > 0)
 	{
 		// 筛选指定车次：优先可订票、其次车次(完全匹配转大写)

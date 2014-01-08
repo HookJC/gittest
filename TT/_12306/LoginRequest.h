@@ -30,6 +30,7 @@ public:
 	bool GetVertifyImg(const string& strfixpath, const string& strfilename); // 获取并保存验证码图片 
 	string GetLoginReturn(const string& struin, const string& strpwd, const string& strvertify);
 	string GetSession();
+	void SetSession(const string& strsess);
 	void CleanSession();
 	void https_close_connect();
 
