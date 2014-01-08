@@ -648,7 +648,15 @@ void CGetTicketDlg::OnBtnRunning()
 	CMemory_Conf::instance()->write_conf_int("ÅäÖÃ", "×ùÏ¯", m_nSeatType);
 	CMemory_Conf::instance()->write_conf_int("ÅäÖÃ", "Ë¢Æ±", m_uiTmGetTicket);
 	CMemory_Conf::instance()->write_conf_int("ÅäÖÃ", "Ìáµ¥", m_uiTmSubmitTicket);
-	CMemory_Conf::instance()->save_conf();
+
+	char szfileconn[4096 + 1] = {0};
+	int iconn = 4096;
+	CEncrypt_Data ce;
+	CMemory_Conf::instance()->get_str(szfileconn, iconn);
+	ce.encode(szfileconn, strlen(szfileconn), szfileconn, &iconn);
+	ce.save(strinifile.c_str(), szfileconn, iconn);
+
+	//CMemory_Conf::instance()->save_conf();
 	
 	m_bRunning = TRUE;	
 	SetDlgItemText(IDC_BTN_RUNNING, "Í£Ö¹");

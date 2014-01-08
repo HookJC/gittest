@@ -238,6 +238,11 @@ int CEncrypt_Data::decode(const char* pszInchar, int iInlen, char* pszOutchar, i
    int noutlen = 0;
    char* szdecode = new char[iInlen*3/4 + 1];
 
+   if (iInlen == 0)
+   {
+	   return 0;
+   }
+
    if (szdecode)
    {
 	   memset(szdecode, 0, sizeof(szdecode));
@@ -296,5 +301,26 @@ int CEncrypt_Data::decode(const char* pszInchar, int iInlen, char* pszOutchar, i
    return 0;
 }
 
+int CEncrypt_Data::save(const char* pszfile, const char* szfileconn, int iconlen, int add /* = false */)
+{
+	FILE* pf = NULL;
+	if (add)
+	{
+		pf = fopen(pszfile, "ab");
+	}
+	else
+	{
+		pf = fopen(pszfile, "wb");
+	}
+	if (pf == NULL)
+	{
+		return -1;
+	}
+
+	fwrite(szfileconn, sizeof(char), iconlen, pf);
+	fflush(pf);
+	fclose(pf);
+	return 0;
+}
 	
 

@@ -29,6 +29,7 @@
 /************************************************************************/
 // 12306 include
 #include <json/json.h>
+#include "_12306/api/encrypt_data.h"
 #include "_12306/typedef.h"
 #include "_12306/qmap.h"
 #include "_12306/petcmd.h"

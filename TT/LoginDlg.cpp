@@ -283,7 +283,15 @@ BOOL CLoginDlg::LoginTicket()
 		CMemory_Conf::instance()->write_conf_str("ÅäÖÃ", "ÃÜÂë", m_strPassWord);
 		m_strSession = creq_->GetSession();
 		CMemory_Conf::instance()->write_conf_str("ÅäÖÃ", "Cookie", m_strSession.c_str());
-		CMemory_Conf::instance()->save_conf();
+		
+		char szfileconn[4096 + 1] = {0};
+		int iconn = 4096;
+		CEncrypt_Data ce;
+		CMemory_Conf::instance()->get_str(szfileconn, iconn);
+		ce.encode(szfileconn, strlen(szfileconn), szfileconn, &iconn);
+		ce.save(strinifile.c_str(), szfileconn, iconn);
+		
+		//CMemory_Conf::instance()->save_conf();
 		return TRUE;
 	}
 	else

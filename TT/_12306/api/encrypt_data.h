@@ -28,6 +28,8 @@ public:
 	int encode(const char* pszInchar, int iInlen, char* pszOutchar, int* iOutlen);
 	int decode(const char* pszInchar, int iInlen, char* pszOutchar, int* ioutlen);
 
+	int save(const char* pszfile, const char* szfileconn, int iconlen, int add = false);
+
 private:
 	int m_iEnlen;
 	char  m_szEnchar[MAX_ENDE_LEN + 1];

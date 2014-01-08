@@ -94,7 +94,14 @@ BOOL CGetTicketApp::InitInstance()
 	strerrorfile = g_strapppath + strerrorfile;
 	strinifile = g_strapppath + strinifile;
 	
-	CMemory_Conf::instance()->load_conf(strinifile.c_str());
+	
+	char szfileconn[4096 + 1] = {0};
+	int iconn = 4096;
+	CEncrypt_Data ce;
+	//ce.defile(strinifile.c_str());
+	//ce.enfile(strinifile.c_str());
+	ce.defile(strinifile.c_str(), szfileconn, &iconn);
+	CMemory_Conf::instance()->load_str(szfileconn);
 	
 	WSAData wsdata;
 	int iret = WSAStartup(0x0101, &wsdata);
