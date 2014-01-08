@@ -970,20 +970,26 @@ while (pt->m_bRunning)
 		if (i != stqtrains.uscount)
 		{
 			// 自动提交
-			// 输入验证码
+			// 输入验证码			
+			string strpassenger;
+			string stroldpassenger;
 			time_t tm_current = time(NULL);
 			time_t tm_space = tm_current;
+
+			strpassenger = str_format("%s,0,%d,%s,%s,%s,%s,Y"
+				, pszseattype[usselseat], pt->m_nTicketType, pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode, pt->m_strMobile);
+			stroldpassenger = str_format("%s,%s,%s"
+				,  pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode);
 
 			strtmp = str_format("secretStr=%s&train_date=%s&tour_flag=dc&purpose_codes=%s"
 					"&query_from_station_name=%s&query_to_station_name=%s&&cancel_flag=2"
 					"&bed_level_order_num=000000000000000000000000000000"
-					"&passengerTicketStr=%s,0,%d,%s,%s,%s,%s,Y"
-					"&oldPassengerStr=%s,%s,%s,1_"
+					"&passengerTicketStr=%s"
+					"&oldPassengerStr=%s,1_"
 					, stqtrains.stlist[i].szsubmitcode, startdate.c_str(), includeStudent.c_str()
 					, startcity.c_str(), endcity.c_str()
-					, pszseattype[usselseat], pt->m_nTicketType, pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode, pt->m_strMobile
-					, pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode);
-			strtmp = CHandleCode::GBKToUTF8(strtmp);
+					, CHandleCode::GBKToUTF8(strpassenger).c_str()
+					, CHandleCode::GBKToUTF8(stroldpassenger).c_str());
 			strack = "";
 			while (strack.empty())
 			{			
@@ -997,7 +1003,7 @@ while (pt->m_bRunning)
 
 			if (!jvalue["data"].isNull() && !jvalue["data"]["result"])
 			{
-				strtoken = jvalue["data"]["result"];
+				strtoken = jvalue["data"]["result"].asString();
 			}
 			if (strtoken.empty())
 			{
@@ -1006,8 +1012,6 @@ while (pt->m_bRunning)
 			}
 
 			string strtriandate;
-			string strpassenger;
-			string stroldpassenger;
 			vector<string> VecTok;
 			str_explode(strtoken, "#", VecTok);
 				
@@ -1048,9 +1052,8 @@ while (pt->m_bRunning)
 			}while (strack.find("\"data\":\"Y\"") == string::npos);
 
 			// /otn/confirmPassenger/confirmSingleForQueueAsys
-			strtmp = str_format("passengerTicketStr=%s%%2C0%%2C%d%%2C%s%%2C%s%%2C%s%%2C%s%%2CY"
-				"&"
-				, pszseattype[usselseat], pt->m_nTicketType, CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(pt->m_strName)), "1"/*证件类型：身份证*/, pt->m_strVerifyCode, pt->m_strMobile):
+			strtmp = str_format("passengerTicketStr=%s"
+				, CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(stroldpassenger)));
 			strack = "";
 			while (strack.empty())
 			{
@@ -1059,7 +1062,9 @@ while (pt->m_bRunning)
 
 
 
-			/*strtmp = str_format("secretStr=%s&train_date=%s&back_train_date=%s&tour_flag=dc&purpose_codes=%s&query_from_station_name=%s&query_to_station_name=%s&undefined"
+			// -- begin 手动提交 --
+			/*
+			strtmp = str_format("secretStr=%s&train_date=%s&back_train_date=%s&tour_flag=dc&purpose_codes=%s&query_from_station_name=%s&query_to_station_name=%s&undefined"
 				, stqtrains.stlist[i].szsubmitcode, startdate.c_str(), startdate.c_str(), includeStudent.c_str(), stqtrains.stlist[i].szstartcity, stqtrains.stlist[i].szendcity);
 			creq->http_post("/otn/leftTicket/submitOrderRequest", strtmp, strack);
 			if (strack.empty() || (jread.parse(strack, jvalue) && !jvalue["status"].asBool()))
@@ -1106,63 +1111,9 @@ while (pt->m_bRunning)
 			
 			//train_date=Wed+Jan+8+00:00:00+UTC+0800+2014
 			strtmp = str_format("train_date=%s&train_no=%s&stationTrainCode=%s&seatType=%d"
-			"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=O007450413M0099500599019950014&purpose_codes=00&_json_att=&REPEAT_SUBMIT_TOKEN=%s")*/
+			"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=O007450413M0099500599019950014&purpose_codes=00&_json_att=&REPEAT_SUBMIT_TOKEN=%s")
+			*/			
 			
-
-			
-			// 提取 strack 内容, 打印票务信息: 实时变化的仅作参考
-			strret = getmidstr(strack, "<table", "</table>"); // 票源信息
-			strret = str_replace(strret, " ", "");
-			strret = str_replace(strret, "\t", "");
-			strret = getmidstr(strret, "</td></tr><tr><td>", "</td></tr><tr><td");
-			strret = str_replace(strret, "</td><td>", "  ");
-			pt->AddInfo("票源信息：%s\r\n          以上余票信息随时发生变化，仅作参考", strret.c_str());
-			
-			// 验证: 组织Post数据
-			// 打印乘客信息，确认无误再提交------------
-			cmap.clear();
-			cmap["checkbox0"] = "0&checkbox9=Y&oldPassengers=&checkbox9=Y&oldPassengers=&checkbox9=Y&oldPassengers=&checkbox9=Y&oldPassengers=&checkbox9=Y"
-				"&textfield=%E4%B8%AD%E6%96%87%E6%88%96%E6%8B%BC%E9%9F%B3%E9%A6%96%E5%AD%97%E6%AF%8D";
-			strret = getmidstr(strack, "<form name=\"save_passenger_single\"", "</form>");
-			//write_to_file(g_strapppath + "\\提交订单页面数据.txt", strret, false);
-			map<string,string> mappm;
-			icount = str_getformsubmit(strret, mappm, pszsubmitconfirm, sizeof(pszsubmitconfirm) / sizeof(char* ));
-			/*for (map<string,string>::const_iterator it = mappm.begin(); it != mappm.end(); ++it)
-			{
-				cout << it->first << " = " << it->second << endl;
-			}*/
-			cmap.add(mappm);
-			// 目前支持订票一张 硬座[默认] 成人
-			cmap["passenger_1_cardno"] = pt->m_strVerifyCode;//strpassenger_cardno;
-			cmap["passenger_1_cardtype"] = "1";//mappassengers[strpassenger_cardno].szidtype; 第二代身份证
-			cmap["passenger_1_mobileno"] = pt->m_strMobile;//mappassengers[strpassenger_cardno].szmobile;
-			cmap["passenger_1_name"] = pt->m_strName;//mappassengers[strpassenger_cardno].szname;
-			cmap["passenger_1_seat"] = pszseattype[usselseat]; // 座席
-			cmap.set("passenger_1_ticket", pt->m_nTicketType/*mappassengers[strpassenger_cardno].ustype */); // 成人票
-
-			strtmp = str_format("%s,0,%s,%s,%s,%s,%s,Y", cmap["passenger_1_seat"].c_str()
-				, cmap["passenger_1_ticket"].c_str()
-				, cmap["passenger_1_name"].c_str()
-				, cmap["passenger_1_cardtype"].c_str()
-				, cmap["passenger_1_cardno"].c_str()
-				, cmap["passenger_1_mobileno"].c_str());
-			cmap["passengerTickets"] = strtmp;
-
-			strtmp = str_format("%s,%s,%s", cmap["passenger_1_name"].c_str()
-				, cmap["passenger_1_cardtype"].c_str()
-				, cmap["passenger_1_cardno"].c_str());
-			cmap["oldPassengers"] = strtmp;
-
-			cmap["orderRequest.reserve_flag"] = "A";
-			cmap["tFlag"] = "dc";
-			// 编码
-			cmap["orderRequest.start_time"] = CHandleCode::UrlEncode(cmap["orderRequest.start_time"]);
-			cmap["orderRequest.end_time"] = CHandleCode::UrlEncode(cmap["orderRequest.end_time"]);
-			cmap["orderRequest.from_station_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strsc));
-			cmap["orderRequest.to_station_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strec));
-			cmap["passengerTickets"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["passengerTickets"]));
-			cmap["passenger_1_name"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["passenger_1_name"]));
-			cmap["oldPassengers"] = CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(cmap["oldPassengers"]));	
 
 			// 预定页面开始订票程序			
 			do 
