@@ -97,7 +97,7 @@ map<string, string> mapstrcity; // 城市信息 城市：代号
 string strRCodePath = "\\randCode.jpg"; // 验证码
 string strsignfile = "\\pem_12306.pem";	// 证书
 string strerrorfile = "\\error.txt";
-string strinifile = "\\参数配置.ini";
+string strinifile = "\\mytrain.ini";
 string stralterapp = "RightDownNotify.exe";
 const char* pszloginimg = "/otn/passcodeNew/getPassCodeNew?module=login&rand=sjrand&0."; // 登陆验证码
 const char* pszpasgeimg = "/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&0."; // 订票验证码
