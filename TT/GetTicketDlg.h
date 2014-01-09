@@ -65,6 +65,8 @@ public:
 	ulong m_nGetTicketTimes;
 	static UINT GetTickets(LPVOID lpVoid);
 
+	CString m_strTrainType;
+
 /************************************************************************/
 // ¡Ÿ ±∑Ω∑®
 	CString Gettrain_date(const char* pszdate);

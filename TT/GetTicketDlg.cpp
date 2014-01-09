@@ -103,6 +103,8 @@ const char* pszloginimg = "/otn/passcodeNew/getPassCodeNew?module=login&rand=sjr
 const char* pszpasgeimg = "/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&0."; // 订票验证码
 const char* pszautoimgpath = "/otn/passcodeNew/getPassCodeNew.do?module=login&rand=sjrand&0."; // 自动提交订单
 
+const char* psztrain_type[] = {"G", "D", "Z", "T", "K"};
+
 const char* pszseattext[] = {"商务座", "特等座", "一等座", "二等座", "高级软卧","软卧", "硬卧", "软座", "硬座", "无座", "其他"}; // 座席
 const char* pszseattype[] = {"9", "P", "M", "O", "", "4", "3", "2", "1", "1", ""}; // 座席代号
 const char* pszdseattype[] = {"9", "P", "7", "8", "", "4", "3", "2", "1", "1", ""}; // 座席代号
@@ -443,6 +445,19 @@ void CGetTicketDlg::InitParam()
 		m_strEndTime = "23:59";
 	}
 
+	CMemory_Conf::instance()->get_conf_str("配置", "车次类型", "", sztmp, MAX_BUFFER_BLOCK);
+	m_strTrainType = sztmp;
+	if (!m_strTrainType.IsEmpty())
+	{
+		for (int i = 0; i < 5; ++i)
+		{
+			if (m_strTrainType.Find(psztrain_type[i]) > -1)
+			{
+				((CButton* )GetDlgItem(IDC_CHECK1 + i))->SetCheck(TRUE);
+			}
+		}
+	}	
+
 	CMemory_Conf::instance()->get_conf_str("配置", "车次", "", sztmp, MAX_BUFFER_BLOCK);
 	m_strTrainNo = sztmp;
 
@@ -469,80 +484,6 @@ void CGetTicketDlg::InitParam()
 
 	UpdateData(FALSE);
 }
-
-void CGetTicketDlg::InitManList()
-{
-	LONG lStyle; 
-	lStyle = GetWindowLong(m_listMan.m_hWnd, GWL_STYLE);//获取当前窗口style 
-	lStyle &= ~LVS_TYPEMASK; //清除显示方式位 
-	lStyle |= LVS_REPORT; //设置style 	
-	SetWindowLong(m_listMan.m_hWnd, GWL_STYLE, lStyle);//设置style 
-	DWORD dwStyle = m_listMan.GetExtendedStyle(); 
-	dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮（只适用与report风格的listctrl） 
-	dwStyle |= LVS_EX_GRIDLINES;//网格线（只适用与report风格的listctrl） 
-	//dwStyle |= LVS_EX_CHECKBOXES;//item前生成checkbox控件 
-	m_listMan.SetExtendedStyle(dwStyle); //设置扩展风格 
-	
-	//m_listMan.InsertColumn(0, _T("Y/N"), LVCFMT_CENTER, 30, 0);
-	m_listMan.InsertColumn(0, _T("姓名"), LVCFMT_LEFT, 50, 0);
-	m_listMan.InsertColumn(1, _T("二代身份证"), LVCFMT_LEFT, 126, 0);
-
-	m_listMan.InsertItem(1, "李四");
-	m_listMan.SetItemText(1, 1, "433423199303131413"); //*/
-}
-
-void CGetTicketDlg::InitTicketList()
-{
-	LONG lStyle; 
-	lStyle = GetWindowLong(m_listTicket.m_hWnd, GWL_STYLE);//获取当前窗口style 
-	lStyle &= ~LVS_TYPEMASK; //清除显示方式位 
-	lStyle |= LVS_REPORT; //设置style 
-	lStyle |= LVS_NOSCROLL; //隐藏滚动条
-	SetWindowLong(m_listTicket.m_hWnd, GWL_STYLE, lStyle);//设置style 
-	DWORD dwStyle = m_listTicket.GetExtendedStyle(); 
-	dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮（只适用与report风格的listctrl） 
-	dwStyle |= LVS_EX_GRIDLINES;//网格线（只适用与report风格的listctrl） 
-	//dwStyle |= LVS_EX_CHECKBOXES;//item前生成checkbox控件 
-	m_listTicket.SetExtendedStyle(dwStyle); //设置扩展风格 
-	//m_listTicket.ShowScrollBar(SB_HORZ, FALSE); // 隐藏水平滚动条
-	
-	int i = 0;
-	m_listTicket.InsertColumn(i++, _T("车次"), LVCFMT_LEFT, 40, 0);
-	m_listTicket.InsertColumn(i++, _T("(始)发站(时间)"), LVCFMT_CENTER, 104, 0);
-	m_listTicket.InsertColumn(i++, _T("(始)到站(时间)"), LVCFMT_CENTER, 104, 0);
-	m_listTicket.InsertColumn(i++, _T("历时"), LVCFMT_CENTER, 42, 0);
-	m_listTicket.InsertColumn(i++, _T("商务座"), LVCFMT_CENTER, 50, 0);
-	m_listTicket.InsertColumn(i++, _T("特等座"), LVCFMT_CENTER, 50, 0);
-	m_listTicket.InsertColumn(i++, _T("一等座"), LVCFMT_CENTER, 50, 0);
-	m_listTicket.InsertColumn(i++, _T("二等座"), LVCFMT_CENTER, 50, 0);
-	m_listTicket.InsertColumn(i++, _T("高级软卧"), LVCFMT_CENTER, 60, 0);
-	m_listTicket.InsertColumn(i++, _T("软卧"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("硬卧"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("软座"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("硬座"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("无座"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("其他"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("购票"), LVCFMT_CENTER, 36, 0);	
-}
-
-void CGetTicketDlg::OnClickListMan(NMHDR* pNMHDR, LRESULT* pResult) 
-{
-	// TODO: Add your control notification handler code here	
-	int idx = m_listMan.GetSelectionMark();
-	if (idx == -1)
-	{
-		return;
-	}	
-	m_iSelMan = idx;
-	m_strName = m_listMan.GetItemText(idx, 0);
-	m_strVerifyCode = m_listMan.GetItemText(idx, 1);
-	SetDlgItemText(IDC_EDIT_NAME, m_strName);
-	SetDlgItemText(IDC_EDIT_VERIFYCODE, m_strVerifyCode);
-
-	*pResult = 0;
-}
-
-
 
 void CGetTicketDlg::OnBtnRunning() 
 {
@@ -622,6 +563,16 @@ void CGetTicketDlg::OnBtnRunning()
 		strseattext = pszseattext[m_nSeatType - 1];
 	}
 
+	m_strTrainType = "#";
+	for (int i = 0; i < 5; ++i)
+	{
+		if (((CButton* )GetDlgItem(IDC_CHECK1 + i))->GetCheck())
+		{
+			m_strTrainType += psztrain_type[i];
+			m_strTrainType += "#";
+		}
+	}
+
 	// 保存所有信息
 	CMemory_Conf::instance()->write_conf_str("配置", "出发地", m_strStartCity);
 	CMemory_Conf::instance()->write_conf_str("配置", "目的地", m_strEndCity);
@@ -629,6 +580,7 @@ void CGetTicketDlg::OnBtnRunning()
 	CMemory_Conf::instance()->write_conf_str("配置", "出发时间", m_strStartTime);
 	CMemory_Conf::instance()->write_conf_str("配置", "出发时间止", m_strEndTime);
 	CMemory_Conf::instance()->write_conf_str("配置", "车次", m_strTrainNo);
+	CMemory_Conf::instance()->write_conf_str("配置", "车次类型", m_strTrainType);
 	CMemory_Conf::instance()->write_conf_str("配置", "姓名", m_strName);
 	CMemory_Conf::instance()->write_conf_str("配置", "身份证", m_strVerifyCode);
 	CMemory_Conf::instance()->write_conf_str("配置", "手机号", m_strMobile);
@@ -651,6 +603,78 @@ void CGetTicketDlg::OnBtnRunning()
 	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(FALSE);
 	m_nGetTicketTimes = 0;
 	AfxBeginThread(GetTickets, this);
+}
+
+void CGetTicketDlg::InitManList()
+{
+	LONG lStyle; 
+	lStyle = GetWindowLong(m_listMan.m_hWnd, GWL_STYLE);//获取当前窗口style 
+	lStyle &= ~LVS_TYPEMASK; //清除显示方式位 
+	lStyle |= LVS_REPORT; //设置style 	
+	SetWindowLong(m_listMan.m_hWnd, GWL_STYLE, lStyle);//设置style 
+	DWORD dwStyle = m_listMan.GetExtendedStyle(); 
+	dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮（只适用与report风格的listctrl） 
+	dwStyle |= LVS_EX_GRIDLINES;//网格线（只适用与report风格的listctrl） 
+	//dwStyle |= LVS_EX_CHECKBOXES;//item前生成checkbox控件 
+	m_listMan.SetExtendedStyle(dwStyle); //设置扩展风格 
+	
+	//m_listMan.InsertColumn(0, _T("Y/N"), LVCFMT_CENTER, 30, 0);
+	m_listMan.InsertColumn(0, _T("姓名"), LVCFMT_LEFT, 50, 0);
+	m_listMan.InsertColumn(1, _T("二代身份证"), LVCFMT_LEFT, 126, 0);
+
+	m_listMan.InsertItem(1, "李四");
+	m_listMan.SetItemText(1, 1, "433423199303131413"); //*/
+}
+
+void CGetTicketDlg::InitTicketList()
+{
+	LONG lStyle; 
+	lStyle = GetWindowLong(m_listTicket.m_hWnd, GWL_STYLE);//获取当前窗口style 
+	lStyle &= ~LVS_TYPEMASK; //清除显示方式位 
+	lStyle |= LVS_REPORT; //设置style 
+	lStyle |= LVS_NOSCROLL; //隐藏滚动条
+	SetWindowLong(m_listTicket.m_hWnd, GWL_STYLE, lStyle);//设置style 
+	DWORD dwStyle = m_listTicket.GetExtendedStyle(); 
+	dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮（只适用与report风格的listctrl） 
+	dwStyle |= LVS_EX_GRIDLINES;//网格线（只适用与report风格的listctrl） 
+	//dwStyle |= LVS_EX_CHECKBOXES;//item前生成checkbox控件 
+	m_listTicket.SetExtendedStyle(dwStyle); //设置扩展风格 
+	//m_listTicket.ShowScrollBar(SB_HORZ, FALSE); // 隐藏水平滚动条
+	
+	int i = 0;
+	m_listTicket.InsertColumn(i++, _T("车次"), LVCFMT_LEFT, 40, 0);
+	m_listTicket.InsertColumn(i++, _T("(始)发站(时间)"), LVCFMT_CENTER, 104, 0);
+	m_listTicket.InsertColumn(i++, _T("(始)到站(时间)"), LVCFMT_CENTER, 104, 0);
+	m_listTicket.InsertColumn(i++, _T("历时"), LVCFMT_CENTER, 42, 0);
+	m_listTicket.InsertColumn(i++, _T("商务座"), LVCFMT_CENTER, 50, 0);
+	m_listTicket.InsertColumn(i++, _T("特等座"), LVCFMT_CENTER, 50, 0);
+	m_listTicket.InsertColumn(i++, _T("一等座"), LVCFMT_CENTER, 50, 0);
+	m_listTicket.InsertColumn(i++, _T("二等座"), LVCFMT_CENTER, 50, 0);
+	m_listTicket.InsertColumn(i++, _T("高级软卧"), LVCFMT_CENTER, 60, 0);
+	m_listTicket.InsertColumn(i++, _T("软卧"), LVCFMT_CENTER, 36, 0);
+	m_listTicket.InsertColumn(i++, _T("硬卧"), LVCFMT_CENTER, 36, 0);
+	m_listTicket.InsertColumn(i++, _T("软座"), LVCFMT_CENTER, 36, 0);
+	m_listTicket.InsertColumn(i++, _T("硬座"), LVCFMT_CENTER, 36, 0);
+	m_listTicket.InsertColumn(i++, _T("无座"), LVCFMT_CENTER, 36, 0);
+	m_listTicket.InsertColumn(i++, _T("其他"), LVCFMT_CENTER, 36, 0);
+	m_listTicket.InsertColumn(i++, _T("购票"), LVCFMT_CENTER, 36, 0);	
+}
+
+void CGetTicketDlg::OnClickListMan(NMHDR* pNMHDR, LRESULT* pResult) 
+{
+	// TODO: Add your control notification handler code here	
+	int idx = m_listMan.GetSelectionMark();
+	if (idx == -1)
+	{
+		return;
+	}	
+	m_iSelMan = idx;
+	m_strName = m_listMan.GetItemText(idx, 0);
+	m_strVerifyCode = m_listMan.GetItemText(idx, 1);
+	SetDlgItemText(IDC_EDIT_NAME, m_strName);
+	SetDlgItemText(IDC_EDIT_VERIFYCODE, m_strVerifyCode);
+
+	*pResult = 0;
 }
 
 UINT CGetTicketDlg::GetPassernger(LPVOID lpVoid)
@@ -835,6 +859,10 @@ while (pt->m_bRunning)
 			}
 			
 			// 车次匹配
+			if (!pt->m_strTrainType.IsEmpty() && pt->m_strTrainType.Find((jlistitem["station_train_code"].asString())[0]) == -1)
+			{
+				continue;
+			}
 
 						
 			
@@ -1165,11 +1193,12 @@ while (pt->m_bRunning)
 			//train_date=Wed+Jan+8+00:00:00+UTC+0800+2014
 			strtmp = str_format("train_date=%s&train_no=%s&stationTrainCode=%s&seatType=%d"
 			"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=O007450413M0099500599019950014&purpose_codes=00&_json_att=&REPEAT_SUBMIT_TOKEN=%s")
-			*/			
+			*/
+			// -- end 手动提交 --
 		}
 		else
 		{
-			pt->AddInfo("未查询到所需车票，5s后继续查询");
+			pt->AddInfo("未查询到所需车票，%us后继续查询", pt->m_uiTmGetTicket);
 		}
 	}
 	else
