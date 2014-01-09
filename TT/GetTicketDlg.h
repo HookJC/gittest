@@ -43,6 +43,7 @@ public:
 	UINT	m_uiTmGetTicket;
 	UINT	m_uiTmSubmitTicket;
 	CString	m_strStartTime;
+	CString	m_strEndTime;
 	//}}AFX_DATA
 
 	// ClassWizard generated virtual function overrides
@@ -55,13 +56,20 @@ public:
 
 public:	
 	void AddInfo(const char* fmt, ...);
-
+	
+	BOOL m_bGetPassenger;
 	static UINT GetPassernger(LPVOID lpVoid); // 获取联系人	
 	
 	BOOL m_bRunning; // 查询购票信息
 	HANDLE m_hdWaitCode; // 等待验证码输入
 	ulong m_nGetTicketTimes;
 	static UINT GetTickets(LPVOID lpVoid);
+
+/************************************************************************/
+// 临时方法
+	CString Gettrain_date(const char* pszdate);
+
+/************************************************************************/
 
 private:
 	void InitManList();
@@ -90,6 +98,7 @@ protected:
 	afx_msg void OnTimer(UINT nIDEvent);
 	afx_msg void OnBtnGetticket();
 	afx_msg void OnChangeEditRcode();
+	afx_msg void OnBtnRefpassenger();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

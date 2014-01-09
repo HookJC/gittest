@@ -212,6 +212,7 @@ CGetTicketDlg::CGetTicketDlg(CWnd* pParent /*=NULL*/)
 	m_uiTmGetTicket = 0;
 	m_uiTmSubmitTicket = 0;
 	m_strStartTime = _T("");
+	m_strEndTime = _T("");
 	//}}AFX_DATA_INIT
 	// Note that LoadIcon does not require a subsequent DestroyIcon in Win32
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -240,6 +241,7 @@ void CGetTicketDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_TMGETTICKET, m_uiTmGetTicket);
 	DDX_Text(pDX, IDC_EDIT_TMSUBMITTICKET, m_uiTmSubmitTicket);
 	DDX_CBString(pDX, IDC_COMBO_STARTTIME, m_strStartTime);
+	DDX_CBString(pDX, IDC_COMBO_ENDTIME, m_strEndTime);
 	//}}AFX_DATA_MAP
 }
 
@@ -254,6 +256,7 @@ BEGIN_MESSAGE_MAP(CGetTicketDlg, CDialog)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BTN_GETTICKET, OnBtnGetticket)
 	ON_EN_CHANGE(IDC_EDIT_RCODE, OnChangeEditRcode)
+	ON_BN_CLICKED(IDC_BTN_REFPASSENGER, OnBtnRefpassenger)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -287,6 +290,9 @@ BOOL CGetTicketDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
+	//test
+	Gettrain_date(date("Y-m-d", 1).c_str());
+
 	// add you code
 	CenterWindow();
 	SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -302,8 +308,7 @@ BOOL CGetTicketDlg::OnInitDialog()
 
 	// 获取乘客
 	AfxBeginThread(GetPassernger, this);
-
-	SetWindowPos(&CWnd::wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -422,13 +427,18 @@ void CGetTicketDlg::InitParam()
 		m_strStartDate = date("Y-m-d").c_str();
 	}
 
-	CMemory_Conf::instance()->get_conf_str("配置", "出发时间", "00:00--24:00", sztmp, MAX_BUFFER_BLOCK);
+	CMemory_Conf::instance()->get_conf_str("配置", "出发时间", "00:00", sztmp, MAX_BUFFER_BLOCK);
 	m_strStartTime = sztmp;
 	if (m_strStartTime.IsEmpty())
 	{
-		m_strStartTime = "00:00--24:00";
+		m_strStartTime = "00:00";
 	}
-	
+	CMemory_Conf::instance()->get_conf_str("配置", "出发时间止", "23:59", sztmp, MAX_BUFFER_BLOCK);
+	m_strEndTime = sztmp;
+	if (m_strEndTime.IsEmpty())
+	{
+		m_strEndTime = "23:59";
+	}
 
 	CMemory_Conf::instance()->get_conf_str("配置", "车次", "", sztmp, MAX_BUFFER_BLOCK);
 	m_strTrainNo = sztmp;
@@ -474,10 +484,6 @@ void CGetTicketDlg::InitManList()
 	m_listMan.InsertColumn(0, _T("姓名"), LVCFMT_LEFT, 50, 0);
 	m_listMan.InsertColumn(1, _T("二代身份证"), LVCFMT_LEFT, 126, 0);
 
-	/*/ test data
-	m_listMan.InsertItem(0, "张三");
-	m_listMan.SetItemText(0, 1, "433423199303131413");
-
 	m_listMan.InsertItem(1, "李四");
 	m_listMan.SetItemText(1, 1, "433423199303131413"); //*/
 }
@@ -513,27 +519,7 @@ void CGetTicketDlg::InitTicketList()
 	m_listTicket.InsertColumn(i++, _T("硬座"), LVCFMT_CENTER, 36, 0);
 	m_listTicket.InsertColumn(i++, _T("无座"), LVCFMT_CENTER, 36, 0);
 	m_listTicket.InsertColumn(i++, _T("其他"), LVCFMT_CENTER, 36, 0);
-	m_listTicket.InsertColumn(i++, _T("购票"), LVCFMT_CENTER, 36, 0);
-	
-	/*/ test data
-	int j = 1;
-	m_listTicket.InsertItem(0, _T("K9122"));
-	m_listTicket.SetItemText(0, j++, "(始) 深圳 21:43");
-	m_listTicket.SetItemText(0, j++, "(终) 衡阳 06:21");
-	m_listTicket.SetItemText(0, j++, "09:12");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "132");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "1024");
-	m_listTicket.SetItemText(0, j++, "有");
-	m_listTicket.SetItemText(0, j++, "--");
-	m_listTicket.SetItemText(0, j++, "1"); //*/
-	
+	m_listTicket.InsertColumn(i++, _T("购票"), LVCFMT_CENTER, 36, 0);	
 }
 
 void CGetTicketDlg::OnClickListMan(NMHDR* pNMHDR, LRESULT* pResult) 
@@ -597,13 +583,11 @@ void CGetTicketDlg::OnBtnRunning()
 	startdate = m_strStartDate;
 
 	// 出发时间
-	if (m_strStartTime.IsEmpty())
+	if (strcmp(m_strStartTime, m_strEndTime) == 1)
 	{
-		AfxMessageBox("出发时间不能为空");
+		AfxMessageBox("出发时间段选择有误");
 		return;
 	}
-	startTime = m_strStartTime;	
-	replace(startTime, ":", "%3A");
 
 	// 车次
 	trainCodeText = m_strTrainNo;
@@ -640,6 +624,7 @@ void CGetTicketDlg::OnBtnRunning()
 	CMemory_Conf::instance()->write_conf_str("配置", "目的地", m_strEndCity);
 	CMemory_Conf::instance()->write_conf_str("配置", "出发日期", m_strStartDate);
 	CMemory_Conf::instance()->write_conf_str("配置", "出发时间", m_strStartTime);
+	CMemory_Conf::instance()->write_conf_str("配置", "出发时间止", m_strEndTime);
 	CMemory_Conf::instance()->write_conf_str("配置", "车次", m_strTrainNo);
 	CMemory_Conf::instance()->write_conf_str("配置", "姓名", m_strName);
 	CMemory_Conf::instance()->write_conf_str("配置", "身份证", m_strVerifyCode);
@@ -681,6 +666,7 @@ UINT CGetTicketDlg::GetPassernger(LPVOID lpVoid)
 	char sztmp[MAX_BUFFER_BLOCK + 1] = {0};
 
 	CGetTicketDlg* pT = (CGetTicketDlg* )lpVoid;
+	pT->m_bGetPassenger = TRUE;
 	
 	map<string, TRAIN_PASSENGER_INFO> mappassengers; // 证件号码=>个人信息
 	TRAIN_PASSENGER_INFO stper_passenger; // 个人信息
@@ -688,25 +674,13 @@ UINT CGetTicketDlg::GetPassernger(LPVOID lpVoid)
 	
 	memset(&trainpassengers, 0, sizeof(TRAIN_PASSENGER_LIST));
 	pT->m_listMan.DeleteAllItems();
-	//cmap.cmd(_12306_GETTRAIN_PASSENGER);
-	iret = creq->http_post("/otn/passengers/query", "pageIndex=1&pageSize=50", strack);
-	// 提取乘客数据
-	/*strack = getmidstr(strack, "var passengers=", ";");
-	strack = str_replace(strack, "'", "\"");
-	strack = str_replace(strack, "\\u", "\u");
-
-	// Unicode to Ascii
-	char szbuff[4096] = {0};
-	unicode_to_utf(strack, szbuff, 4096);
-	strack = szbuff;
-	CHandleCode::UTF8ToGBK(strack);
-
-	strack = str_format("{\"passengerJson\":%s}", strack.c_str());*/
+	iret = creq->http_get("/otn/confirmPassenger/getPassengerDTOs", strack);
+	
 	if (jread.parse(strack, jvalue))
 	{
 		if (!jvalue["data"].isNull())
 		{
-			jlist = jvalue["data"]["datas"];
+			jlist = jvalue["data"]["normal_passengers"];
 			if (jlist.isArray())
 			{
 				pT->AddInfo("正在获取联系人....");
@@ -739,7 +713,10 @@ UINT CGetTicketDlg::GetPassernger(LPVOID lpVoid)
 			}			
 		}
 	}
-	pT->AddInfo("成功获取 %d 位联系人", mappassengers.size());	
+	pT->AddInfo("成功获取 %d 位联系人", mappassengers.size());
+	pT->SetWindowPos(&CWnd::wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+	pT->m_bGetPassenger = FALSE;
 	return 0;
 }
 
@@ -789,30 +766,12 @@ while (pt->m_bRunning)
 		, (trainCodeText.empty() ? "有车" : trainCodeText.c_str())
 		, pt->m_strName, pt->m_strVerifyCode
 		, (strseattext.empty() ? "有座" : strseattext.c_str())
-		, pt->m_nGetTicketTimes);
-	
-	/*cmap.clear();
-	cmap.cmd(_12306_LOAD_DATA);	
-	cmap["method"] = "qt"; // step 1
-	cmap["path"] = str_format("&orderRequest.train_date=%s&orderRequest.from_station_telecode=%s"
-		"&orderRequest.to_station_telecode=%s&orderRequest.train_no=%s&trainPassType=%s&trainClass=%s"
-		"&includeStudent=%s&seatTypeAndNum=%s&orderRequest.start_time_str=%s"
-		, startdate.c_str(), startcitycode.c_str(), endcitycode.c_str(), train_no.c_str()
-		, trainPassType.c_str(), trainClass.c_str(), includeStudent.c_str(), seatTypeAndNum.c_str(), startTime.c_str());
-	iret = creq->parse(cmap, strack);*/
+		, pt->m_nGetTicketTimes);	
+
 
 	strtmp = str_format("/otn/leftTicket/query?leftTicketDTO.train_date=%s&leftTicketDTO.from_station=%s&leftTicketDTO.to_station=%s&purpose_codes=%s"
 		, startdate.c_str(), startcitycode.c_str(), endcitycode.c_str(), includeStudent.c_str());
-	iret = creq->http_get(strtmp, strack);
-	
-	//write_to_file(g_strapppath + "\\qt.html", strack, false);	
-	
-	/*if (strack.empty())
-	{
-		cmap["method"] = "queryLeftTicket"; // step 2
-		iret = creq->parse(cmap, strack);
-	}*/
-	//write_to_file(g_strapppath + "\\queryLeftTicket.html", strack, false);
+	iret = creq->http_get(strtmp, strack);	
 	
 	pt->m_listTicket.DeleteAllItems();
 	pt->m_listTicket.ShowScrollBar(SB_VERT, FALSE);
@@ -861,57 +820,70 @@ while (pt->m_bRunning)
 	if (jlist.isArray())
 	{		
 		icount = jlist.size();
-		for (i = 0; i < icount && i < MAX_LOAD_DATA; ++i)
+		for (i = 0, j = 0; i < icount && j < MAX_LOAD_DATA; ++i)
 		{
 			jlistitem = jlist[i]["queryLeftNewDTO"];
-			++stqtrains.uscount;
-			
-			strncpy(stqtrains.stlist[i].sztrain_nos, jlistitem["train_no"].asCString(), MAX_TRAIN_NO); //
 
-			strncpy(stqtrains.stlist[i].sztrain_no, jlistitem["station_train_code"].asCString(), MAX_TRAIN_NO); // 
+			// 出发时间段匹配
+			if (strcmp(jlistitem["start_time"].asCString(), pt->m_strStartTime) == -1 
+				|| strcmp(jlistitem["start_time"].asCString(), pt->m_strEndTime) == 1)
+			{
+				continue;
+			}
 			
-			strncpy(stqtrains.stlist[i].szstartcity, jlistitem["from_station_name"].asCString(), MAX_CITY_LEN); // 
-			stqtrains.stlist[i].bstart = strcmp(jlistitem["start_station_name"].asCString(), jlistitem["from_station_name"].asCString()) == 0 ? 1 : 0; // 
-			strncpy(stqtrains.stlist[i].szstarttime, jlistitem["start_time"].asCString(), MAX_TIME_LEN); // 
-			
-			strncpy(stqtrains.stlist[i].szendcity, jlistitem["to_station_name"].asCString(), MAX_CITY_LEN); // 
-			stqtrains.stlist[i].bend = strcmp(jlistitem["end_station_name"].asCString(), jlistitem["to_station_name"].asCString()) == 0 ? 1 : 0; // 
-			strncpy(stqtrains.stlist[i].szendtime, jlistitem["arrive_time"].asCString(), MAX_TIME_LEN); // 
+			// 车次匹配
 
-			strncpy(stqtrains.stlist[i].szusetime, jlistitem["lishi"].asCString(), MAX_TIME_LEN); // 
+						
+			
+			strncpy(stqtrains.stlist[j].sztrain_nos, jlistitem["train_no"].asCString(), MAX_TRAIN_NO); //
+
+			strncpy(stqtrains.stlist[j].sztrain_no, jlistitem["station_train_code"].asCString(), MAX_TRAIN_NO); // 
+			
+			strncpy(stqtrains.stlist[j].szstartcity, jlistitem["from_station_name"].asCString(), MAX_CITY_LEN); // 
+			stqtrains.stlist[j].bstart = strcmp(jlistitem["start_station_name"].asCString(), jlistitem["from_station_name"].asCString()) == 0 ? 1 : 0; // 
+			strncpy(stqtrains.stlist[j].szstarttime, jlistitem["start_time"].asCString(), MAX_TIME_LEN); // 
+			
+			strncpy(stqtrains.stlist[j].szendcity, jlistitem["to_station_name"].asCString(), MAX_CITY_LEN); // 
+			stqtrains.stlist[j].bend = strcmp(jlistitem["end_station_name"].asCString(), jlistitem["to_station_name"].asCString()) == 0 ? 1 : 0; // 
+			strncpy(stqtrains.stlist[j].szendtime, jlistitem["arrive_time"].asCString(), MAX_TIME_LEN); // 
+
+			strncpy(stqtrains.stlist[j].szusetime, jlistitem["lishi"].asCString(), MAX_TIME_LEN); // 
 			
 			k = 0; // 
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["swz_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["tz_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["zy_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["ze_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["gr_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["swz_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["tz_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["zy_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["ze_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["gr_num"].asCString());
 			
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["rw_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["yw_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["rz_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["yz_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["rw_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["yw_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["rz_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["yz_num"].asCString());
 			
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["wz_num"].asCString());
-			strcpy(stqtrains.stlist[i].szTicket[k++], jlistitem["qt_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["wz_num"].asCString());
+			strcpy(stqtrains.stlist[j].szTicket[k++], jlistitem["qt_num"].asCString());
 
 			if (stricmp("Y", jlistitem["canWebBuy"].asCString()) == 0)
 			{
-				stqtrains.stlist[i].bsubmit = 1;
-				strncpy(stqtrains.stlist[i].szsubmitcode, (jlist[i]["secretStr"]).asCString(), SUBMIT_CODE_LEN);
+				stqtrains.stlist[j].bsubmit = 1;
+				strncpy(stqtrains.stlist[j].szsubmitcode, (jlist[i]["secretStr"]).asCString(), SUBMIT_CODE_LEN);
 			}
 
-			pt->m_listTicket.InsertItem(i, stqtrains.stlist[i].sztrain_no);
-			pt->m_listTicket.SetItemText(i, 1, str_format("%s%-6s(%s)", stqtrains.stlist[i].bstart ? "Y " : "  "
-				, stqtrains.stlist[i].szstartcity, stqtrains.stlist[i].szstarttime).c_str());
-			pt->m_listTicket.SetItemText(i, 2, str_format("%s%-6s(%s)", stqtrains.stlist[i].bend ? "Y " : "  "
-				, stqtrains.stlist[i].szendcity, stqtrains.stlist[i].szendtime).c_str());
-			pt->m_listTicket.SetItemText(i, 3, stqtrains.stlist[i].szusetime);
+			pt->m_listTicket.InsertItem(j, stqtrains.stlist[j].sztrain_no);
+			pt->m_listTicket.SetItemText(j, 1, str_format("%s%-6s(%s)", stqtrains.stlist[j].bstart ? "Y " : "  "
+				, stqtrains.stlist[j].szstartcity, stqtrains.stlist[j].szstarttime).c_str());
+			pt->m_listTicket.SetItemText(j, 2, str_format("%s%-6s(%s)", stqtrains.stlist[j].bend ? "Y " : "  "
+				, stqtrains.stlist[j].szendcity, stqtrains.stlist[j].szendtime).c_str());
+			pt->m_listTicket.SetItemText(j, 3, stqtrains.stlist[j].szusetime);
 			for (n = 0; n < TRAIN_TICKET_TYPE; ++n)
 			{
-				pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].szTicket[n]);
+				pt->m_listTicket.SetItemText(j, 3 + n + 1, stqtrains.stlist[j].szTicket[n]);
 			}
-			pt->m_listTicket.SetItemText(i, 3 + n + 1, stqtrains.stlist[i].bsubmit ? "Y" : "N");
+			pt->m_listTicket.SetItemText(j, 3 + n + 1, stqtrains.stlist[j].bsubmit ? "Y" : "N");			
+			
+			++stqtrains.uscount;
+			++j;
 		}
 
 		pt->AddInfo("共查询到%d车次", stqtrains.uscount);
@@ -1009,13 +981,13 @@ while (pt->m_bRunning)
 				continue;
 			}
 
-			if (!jvalue["data"].isNull() && !jvalue["data"]["result"])
+			if (!jvalue["data"].isNull() && !jvalue["data"]["result"].isNull())
 			{
 				strtoken = jvalue["data"]["result"].asString();
 			}
 			if (strtoken.empty())
 			{
-				pt->AddInfo("自动订票请求返回数据异常");
+				pt->AddInfo("自动订票请求返回数据异常: %s", getmidstr(strack, "messages\":[", "]").c_str());
 				continue;
 			}
 
@@ -1024,9 +996,9 @@ while (pt->m_bRunning)
 			str_explode(strtoken, "#", VecTok);
 				
 			// train_date=Wed+Jan+8+17%3A33%3A21+UTC%2B0800+2014&
-			strtmp = str_format("train_no=%s&stationTrainCode=%s&seatType=%s"
+			strtmp = str_format("train_date=%s&train_no=%s&stationTrainCode=%s&seatType=%s"
 				"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=%s&purpose_codes=%s&_json_att="
-				, stqtrains.stlist[i].sztrain_nos, stqtrains.stlist[i].sztrain_no, pszseattype[usselseat]
+				, pt->Gettrain_date(startdate.c_str()), stqtrains.stlist[i].sztrain_nos, stqtrains.stlist[i].sztrain_no, pszseattype[usselseat]
 				, startcitycode.c_str(), endcitycode.c_str(), VecTok[2].c_str(), includeStudent);
 			strack = "";
 			while (strack.empty())
@@ -1036,7 +1008,7 @@ while (pt->m_bRunning)
 			string strticket = getmidstr(strack, "\"ticket\":\"", "\"");
 			if (strticket.empty())
 			{
-				pt->AddInfo("请求票务失败");
+				pt->AddInfo("请求票务失败: %s", getmidstr(strack, "messages\":[", "]").c_str());
 				continue;
 			}
 			
@@ -1497,3 +1469,46 @@ BOOL CGetTicketDlg::PreTranslateMessage(MSG* pMsg)
 	}
 	return CDialog::PreTranslateMessage(pMsg);
 }
+
+void CGetTicketDlg::OnBtnRefpassenger() 
+{
+	// TODO: Add your control notification handler code here
+	if (m_bGetPassenger == FALSE)
+	{
+		AfxBeginThread(GetPassernger, this);
+	}	
+}
+
+/************************************************************************/
+// 临时方法
+
+	// 三 1月  8  17:33:21 UTC+0800+2014
+	// Wed+Jan+8+17%3A33%3A21+UTC%2B0800+2014
+	// pszdate: YYYY-mm-dd
+CString CGetTicketDlg::Gettrain_date(const char* pszdate)
+{
+	// Monday，Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday
+	const char* pszwek[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+	// January February March April May June July August September October November December 
+	const char* pszmonth[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+	CString TicketDate(pszdate);
+	CString train_date;
+	SYSTEMTIME sm;
+	GetLocalTime(&sm);
+
+	CTime td(atoi(TicketDate.Left(4)), atoi(TicketDate.Mid(5, 2)), atoi(TicketDate.Right(2)), 0, 0, 0);
+
+	train_date.Format("%s+%s+%u+%u%%3A%u%%3A%u+UTC%%2B0800+%u"
+		, pszwek[td.GetDayOfWeek() - 1]
+		, pszmonth[td.GetMonth() - 1]
+		, td.GetDay()
+		, sm.wHour
+		, sm.wMinute
+		, sm.wSecond
+		, sm.wYear);
+
+	return train_date;
+}
+
+
+/************************************************************************/

@@ -80,14 +80,27 @@ BOOL CLoginDlg::OnInitDialog()
 	// 尝试使用保存的session查询个人信息
 	if (strcmp(sztmp, "") != 0)
 	{
+		string strret;
+
 		m_strSession = sztmp;
 		creq_->SetSession(m_strSession);
-		string strret;
-		creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
-		if (strret.find(strfixuserinfo) != string::npos)
+
+		// /otn/login/checkUser 
+		while (strret.empty())
 		{
-			m_bLogin = TRUE;			
-			return TRUE;
+			creq_->http_get("/otn/login/checkUser", strret);
+		}
+		if (strret.find("\"data\":{\"flag\":true}") != string::npos)
+		{
+#ifdef OPEN_USERS
+			strret = "";
+			creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
+			if (strret.find(strfixuserinfo) != string::npos)
+#endif
+			{
+				m_bLogin = TRUE;			
+				return TRUE;
+			}
 		}		
 	}
 
@@ -246,7 +259,6 @@ BOOL CLoginDlg::LoginTicket()
 	}while (1);
 
 	SetWindowText("登陆中...");
-	m_bLogin = TRUE;
 
 	// second check verifycode
 	strret = str_format("randCode=%s&rand=sjrand", m_strRCode);
@@ -264,18 +276,21 @@ BOOL CLoginDlg::LoginTicket()
 	}
 
 	//write_to_file(g_strapppath +"\\loginAction.htm", CSocketHTTPRequest::getbody(strret), false);	
-	m_bLogin = FALSE;
+	
 	if (strret.find("{\"loginCheck\":\"Y\"}") != string::npos)
 	{
 		// 保存用户名和密码
 		SetWindowText("登陆成功");
 		// 效验权限：
+#ifdef OPEN_USERS
 		creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
 		if (strret.find(strfixuserinfo) == string::npos)
 		{
 			AfxMessageBox("未对此账号授权，请联系开发人员");
 			return FALSE;
-		}		
+		}
+#endif
+
 		CMemory_Conf::instance()->write_conf_str("配置", "用户名", m_strUserName);
 		CMemory_Conf::instance()->write_conf_str("配置", "密码", m_strPassWord);
 		m_strSession = creq_->GetSession();

@@ -20,6 +20,7 @@
 #define IDC_EDIT_STARTDATE              1011
 #define IDC_COMBO_STARTTIME             1012
 #define IDC_COMBO_EDNTIME               1013
+#define IDC_COMBO_ENDTIME               1013
 #define IDC_BTN_GETTICKET               1014
 #define IDC_EDIT_TRANSNO                1015
 #define IDC_EDIT_NAME                   1016
@@ -31,15 +32,26 @@
 #define IDC_COMBO_STARTDATE             1022
 #define IDC_EDIT_TMGETTICKET            1023
 #define IDC_EDIT_TMSUBMITTICKET         1024
+#define IDC_BTN_REFPASSENGER            1025
+#define IDC_CHECK1                      1026
+#define IDC_CHECK2                      1027
+#define IDC_CHECK3                      1028
+#define IDC_CHECK4                      1029
+#define IDC_CHECK5                      1030
+#define IDC_CHECK6                      1031
+#define IDC_CHECK7                      1032
+#define IDC_CHECK8                      1033
+#define IDC_CHECK9                      1034
+#define IDC_CHECK10                     1035
 #define IDS_USERNAME                    57345
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        131
+#define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1023
+#define _APS_NEXT_CONTROL_VALUE         1027
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
