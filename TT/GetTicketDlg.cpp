@@ -91,7 +91,7 @@ string strrandcode;
 const unsigned int uigetday = 20; // 20天内订票
 const unsigned int uiTicketSpace = 3; // 提交订单和确认订单时间间隔：提交过快将返回网络可能存在问题，请重试！
 const unsigned int uireflushms = 5000; // 查询间隔
-const string strfixuserinfo = "夏良才"; // 指定用户可以使用该工具
+const string strfixuserinfo = "郑中南"; // 指定用户可以使用该工具
 map<string, string> mapstrcity; // 城市信息 城市：代号
 
 string strRCodePath = "\\randCode.jpg"; // 验证码
@@ -922,10 +922,10 @@ while (pt->m_bRunning)
 		pt->m_listTicket.ShowScrollBar(SB_VERT, TRUE);
 	}	
 		
-	if (1)
+	/*if (1)
 	{
 		continue;
-	}
+	}*/
 	
 	if (pt->m_bRunning == FALSE)
 	{
@@ -986,14 +986,14 @@ while (pt->m_bRunning)
 
 			strpassenger = str_format("%s,0,%d,%s,%s,%s,%s,Y"
 				, pszseattype[usselseat], pt->m_nTicketType, pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode, pt->m_strMobile);
-			stroldpassenger = str_format("%s,%s,%s"
+			stroldpassenger = str_format("%s,%s,%s,1_"
 				,  pt->m_strName, "1"/*证件类型：身份证*/, pt->m_strVerifyCode);
 
 			strtmp = str_format("secretStr=%s&train_date=%s&tour_flag=dc&purpose_codes=%s"
 					"&query_from_station_name=%s&query_to_station_name=%s&&cancel_flag=2"
 					"&bed_level_order_num=000000000000000000000000000000"
 					"&passengerTicketStr=%s"
-					"&oldPassengerStr=%s,1_"
+					"&oldPassengerStr=%s"
 					, stqtrains.stlist[i].szsubmitcode, startdate.c_str(), includeStudent.c_str()
 					, startcity.c_str(), endcity.c_str()
 					, CHandleCode::GBKToUTF8(strpassenger).c_str()
@@ -1033,7 +1033,17 @@ while (pt->m_bRunning)
 			{
 				creq->http_post("/otn/confirmPassenger/getQueueCountAsync", strtmp, strack);
 			}
-			// {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"count":"25","ticket":"O007450376M0099500619019950015","op_2":"false","countT":"0","op_1":"true"},"messages":[],"validateMessages":{}}
+			string strticket = getmidstr(strack, "\"ticket\":\"", "\"");
+			if (strticket.empty())
+			{
+				pt->AddInfo("请求票务失败");
+				continue;
+			}
+			
+			if (pt->m_bRunning == FALSE)
+			{
+				break;
+			}
 			
 			tm_space = time(NULL);
 			icount = 0;
@@ -1060,15 +1070,69 @@ while (pt->m_bRunning)
 			}while (strack.find("\"data\":\"Y\"") == string::npos);
 
 			// /otn/confirmPassenger/confirmSingleForQueueAsys
-			strtmp = str_format("passengerTicketStr=%s"
-				, CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(stroldpassenger)));
+			strtmp = str_format("passengerTicketStr=%s&oldPassengerStr=%s"
+				"randCode=%s&purpose_codes=%s&key_check_isChange=%s"
+				"leftTicketStr=%s&train_location=%s&_json_att="
+				, CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strpassenger)), CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(stroldpassenger))
+				, pt->m_strRCode, includeStudent.c_str(), VecTok[1].c_str()
+				, strticket.c_str(), VecTok[0].c_str());
 			strack = "";
 			while (strack.empty())
 			{
 				creq->http_post("/otn/confirmPassenger/confirmSingleForQueueAsys", strtmp, strack);
 			}
+			
+			if (!jread.parse(strack, jvalue) || !jvalue["submitStatus"].asBool())
+			{
+				pt->AddInfo("不能提交：%s", strack.c_str());
+				continue;
+			}
 
+			// /otn/confirmPassenger/queryOrderWaitTime?random=1389173606758&tourFlag=dc&_json_att= 
+			strack = "";
+			SYSTEMTIME st;
+			while (strack.empty())
+			{
+				GetLocalTime(&st);
+				creq->http_get(str_format("/otn/confirmPassenger/queryOrderWaitTime?random=%u%u&tourFlag=dc&_json_att=", time(NULL), st.wMilliseconds), strack);
+				if (jread.parse(strack, jvalue))
+				{					
+					if (!jvalue["data"]["orderId"].isNull())
+					{
+						strack = "";
+						break;
+					}
+					else
+					{
+						strack = "";
+					}
+					if (!jvalue["validateMessages"].asString().empty())
+					{
+						pt->AddInfo("查询等待：%s", jvalue["validateMessages"].asCString());
+						break;
+					}					
+				}
+			}
+			if (!strack.empty())
+			{
+				pt->AddInfo("查询等待失败：%s", strack.c_str());
+				continue;
+			}
 
+			// /otn/confirmPassenger/resultOrderForDcQueue
+			strtmp = str_format("orderSequence_no=%s&_json_att=", jvalue["data"]["orderId"].asCString());
+			strack = "";
+			while (strack.empty())
+			{
+				creq->http_post("/otn/confirmPassenger/resultOrderForDcQueue", strtmp, strack);
+			}
+			if (!jread.parse(strack, jvalue) || !jvalue["submitStatus"].asBool())
+			{
+				pt->AddInfo("订票失败：%s", strack.c_str());
+				continue;
+			}
+
+			
 
 			// -- begin 手动提交 --
 			/*

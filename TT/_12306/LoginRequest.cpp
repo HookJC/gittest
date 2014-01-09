@@ -8,7 +8,7 @@
 #define MAX_RSP_BLOCK	10240
 #define URL_PAGE_PORT 80
 
-string GetRand()
+string CLoginRequest::GetRand()
 {
 	string strrand = "";
 	char szBuf[16 + 1] = {0};

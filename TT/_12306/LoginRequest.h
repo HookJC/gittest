@@ -22,6 +22,8 @@ public:
 	~CLoginRequest();
 
 	enum {HTTP_PORT = 80, HTTPS_PORT = 443};
+
+	static string GetRand();
 	
 public:
 	bool init(const string& strip, unsigned short usport, const string& strsignfile);

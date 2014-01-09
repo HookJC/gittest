@@ -31,6 +31,7 @@ public:
 	void SetCookieClass(LPVOID lpVoid);
 
 	static UINT ThreadLoadInit(LPVOID lpVoid);
+	static UINT ThreadLogin(LPVOID lpVoid);
 
 private:
 	CRCodeBtn m_cbtn;

@@ -73,7 +73,10 @@ BOOL CLoginDlg::OnInitDialog()
 	m_strPassWord = sztmp;
 	UpdateData(FALSE);
 
-	CMemory_Conf::instance()->get_conf_str("配置", "Cookie", "", sztmp, 1024);	
+	CMemory_Conf::instance()->get_conf_str("配置", "Cookie", "", sztmp, 1024);
+	
+	SetTimer(2, 100, NULL);
+	
 	// 尝试使用保存的session查询个人信息
 	if (strcmp(sztmp, "") != 0)
 	{
@@ -82,12 +85,11 @@ BOOL CLoginDlg::OnInitDialog()
 		string strret;
 		creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
 		if (strret.find(strfixuserinfo) != string::npos)
-		{			
-			SetTimer(2, 100, NULL);
+		{
+			m_bLogin = TRUE;			
 			return TRUE;
 		}		
 	}
-
 
 	AfxBeginThread(ThreadLoadInit, this);
 
@@ -145,10 +147,8 @@ BOOL CLoginDlg::PreTranslateMessage(MSG* pMsg)
 		{
 			// Enter键			
 			// 登陆 
-			if (LoginTicket())
-			{
-				CDialog::OnOK();
-			}
+			UpdateData();
+			AfxBeginThread(ThreadLogin, (LPVOID)this);
 			return FALSE; // 登陆失败
 		}
 	}
@@ -190,8 +190,7 @@ BOOL CLoginDlg::LoginTicket()
 	if (m_bLogin)
 	{
 		return FALSE;
-	}
-	UpdateData();
+	}	
 
 	// 验证
 	if (m_strUserName.IsEmpty())
@@ -303,6 +302,18 @@ BOOL CLoginDlg::LoginTicket()
 	return TRUE;
 }
 
+UINT CLoginDlg::ThreadLogin(LPVOID lpVoid)
+{
+	CLoginDlg* pThis = (CLoginDlg* )lpVoid;
+	
+	pThis->m_bLogin = pThis->LoginTicket();
+	if (!pThis->m_bLogin)
+	{
+		pThis->ThreadLoadInit(pThis);
+	}
+
+	return 0;
+}
 
 
 void CLoginDlg::OnChangeEditRcode() 
@@ -316,14 +327,16 @@ void CLoginDlg::OnChangeEditRcode()
 	GetDlgItemText(IDC_EDIT_RCODE, m_strRCode);
 	if (m_strRCode.GetLength() == 4)
 	{
-		if (LoginTicket())
-		{
-			CDialog::OnOK();
-		}
-		else
-		{
-			AfxBeginThread(ThreadLoadInit, this);
-		}
+		UpdateData();
+		AfxBeginThread(ThreadLogin, (LPVOID)this);
+// 		if (LoginTicket())
+// 		{
+// 			CDialog::OnOK();
+// 		}
+// 		else
+// 		{
+// 			AfxBeginThread(ThreadLoadInit, this);
+// 		}
 	}
 }
 
@@ -341,7 +354,10 @@ void CLoginDlg::OnTimer(UINT nIDEvent)
 
 	if (nIDEvent == 2)
 	{
-		CDialog::OnOK();
+		if (m_bLogin)
+		{
+			CDialog::OnOK();
+		}		
 	}
 	
 }
