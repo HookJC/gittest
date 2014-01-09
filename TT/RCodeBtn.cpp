@@ -55,13 +55,20 @@ void CRCodeBtn::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 		AfxMessageBox("È±ÉÙ¶¯Ì¬Á´½Ó¿â:AtlImage.dll");
 		m_hModule=NULL;
 	}
-	m_funLoadAtlImage=(LoadImageFunc)::GetProcAddress(m_hModule, "LoadAtlImage");
+	
+	m_funLoadAtlImage = (LoadImageFunc)::GetProcAddress(m_hModule, "LoadAtlImage");
 	if (!m_funLoadAtlImage)
 	{
 		AfxMessageBox("Function Miss : LoadAtlImage");
 		m_funLoadAtlImage=NULL;
 	}
+	
 	HBITMAP hBitmap = m_funLoadAtlImage((g_strapppath + "\\RandCode.jpg").c_str());
+	if (!hBitmap)
+	{
+		return;
+	}
+
 	CDC* pDC = GetDC();
 	CRect rect;
 	pDC->GetClipBox(&rect);

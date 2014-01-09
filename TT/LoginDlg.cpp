@@ -92,7 +92,7 @@ BOOL CLoginDlg::OnInitDialog()
 		}
 		if (strret.find("\"data\":{\"flag\":true}") != string::npos)
 		{
-#ifdef OPEN_USERS
+#ifndef OPEN_USERS
 			strret = "";
 			creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
 			if (strret.find(strfixuserinfo) != string::npos)
@@ -282,7 +282,7 @@ BOOL CLoginDlg::LoginTicket()
 		// 保存用户名和密码
 		SetWindowText("登陆成功");
 		// 效验权限：
-#ifdef OPEN_USERS
+#ifndef OPEN_USERS
 		creq_->http_get("/otn/modifyUser/initQueryUserInfo", strret);
 		if (strret.find(strfixuserinfo) == string::npos)
 		{

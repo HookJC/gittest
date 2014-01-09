@@ -134,7 +134,7 @@ BOOL CGetTicketApp::InitInstance()
 	if (dlgLogin.DoModal() != IDOK)
 	{
 		exit(0);
-	}	
+	}
 
 	CGetTicketDlg dlg;
 	m_pMainWnd = &dlg;

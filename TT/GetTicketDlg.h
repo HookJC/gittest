@@ -12,6 +12,7 @@
 // CGetTicketDlg dialog
 
 #include "RCodeBtn.h"
+#include "TrainListCtrl.h"
 
 class CGetTicketDlg : public CDialog
 {
@@ -20,6 +21,7 @@ public:
 	CGetTicketDlg(CWnd* pParent = NULL);	// standard constructor
 
 	CRCodeBtn m_cbtn;
+	CTrainListCtrl m_trainlist;
 
 	void alertexit();
 
@@ -101,6 +103,8 @@ protected:
 	afx_msg void OnBtnGetticket();
 	afx_msg void OnChangeEditRcode();
 	afx_msg void OnBtnRefpassenger();
+	afx_msg void OnClose();
+	afx_msg void OnCheckTrainNo();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

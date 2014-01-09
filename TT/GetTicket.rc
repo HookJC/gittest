@@ -150,15 +150,15 @@ BEGIN
     CONTROL         "ÆÕ¿ì(&K)",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,387,297,43,8
     CONTROL         "Train1",IDC_CHECK6,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,437,297,43,8
+                    WS_VISIBLE | WS_TABSTOP,468,297,33,8
     CONTROL         "Train1",IDC_CHECK7,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,487,297,43,8
+                    WS_VISIBLE | WS_TABSTOP,504,297,33,8
     CONTROL         "Train1",IDC_CHECK8,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,537,297,43,8
+                    WS_VISIBLE | WS_TABSTOP,540,297,33,8
     CONTROL         "Train1",IDC_CHECK9,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,587,297,43,8
+                    WS_VISIBLE | WS_TABSTOP,576,297,33,8
     CONTROL         "Train1",IDC_CHECK10,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,637,297,43,8
+                    WS_VISIBLE | WS_TABSTOP,612,297,33,8
 END
 
 IDD_LOGIN_DIALOG DIALOG DISCARDABLE  0, 0, 161, 75
