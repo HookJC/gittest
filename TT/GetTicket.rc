@@ -138,17 +138,17 @@ BEGIN
     COMBOBOX        IDC_COMBO_ENDTIME,469,321,37,67,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
     LTEXT           "-",IDC_STATIC,461,324,8,8
-    CONTROL         "Train1",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,187,297,43,8
+    CONTROL         "高铁(&G)",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,187,297,43,8
     LTEXT           "预定车次",IDC_STATIC,147,297,33,8
-    CONTROL         "Train1",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,237,297,43,8
-    CONTROL         "Train1",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,287,297,43,8
-    CONTROL         "Train1",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,337,297,43,8
-    CONTROL         "Train1",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | NOT 
-                    WS_VISIBLE | WS_TABSTOP,387,297,43,8
+    CONTROL         "动车(&D)",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,237,297,43,8
+    CONTROL         "直达(&Z)",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,287,297,43,8
+    CONTROL         "特快(&T)",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,337,297,43,8
+    CONTROL         "普快(&K)",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,387,297,43,8
     CONTROL         "Train1",IDC_CHECK6,"Button",BS_AUTOCHECKBOX | NOT 
                     WS_VISIBLE | WS_TABSTOP,437,297,43,8
     CONTROL         "Train1",IDC_CHECK7,"Button",BS_AUTOCHECKBOX | NOT 
