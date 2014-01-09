@@ -91,7 +91,7 @@ string strrandcode;
 const unsigned int uigetday = 20; // 20天内订票
 const unsigned int uiTicketSpace = 3; // 提交订单和确认订单时间间隔：提交过快将返回网络可能存在问题，请重试！
 const unsigned int uireflushms = 5000; // 查询间隔
-const string strfixuserinfo = "郑中南"; // 指定用户可以使用该工具
+const string strfixuserinfo = ""; //"郑中南"; // 指定用户可以使用该工具
 map<string, string> mapstrcity; // 城市信息 城市：代号
 
 string strRCodePath = "\\randCode.jpg"; // 验证码
@@ -784,12 +784,12 @@ while (pt->m_bRunning)
 
 	// 打印查询条件
 	++pt->m_nGetTicketTimes;
-	pt->AddInfo("确认信息：\r\n出发地: %s 目的地: %s 出发日期：%s 出发时间：%s\r\n"
+	pt->AddInfo("确认信息：\r\n出发地: %s 目的地: %s 出发日期：%s 出发时间：%s - %s\r\n"
 		"出发车次: %s\r\n"
 		"乘客姓名：%-8s 身份证：%s\r\n"
 		"座席：%s\r\n"
 		"开始进行第%d次查询"
-		, startcity.c_str(), endcity.c_str(), startdate.c_str(), pt->m_strStartTime
+		, startcity.c_str(), endcity.c_str(), startdate.c_str(), pt->m_strStartTime, pt->m_strEndTime
 		, (trainCodeText.empty() ? "有车" : trainCodeText.c_str())
 		, pt->m_strName, pt->m_strVerifyCode
 		, (strseattext.empty() ? "有座" : strseattext.c_str())
@@ -1059,8 +1059,13 @@ while (pt->m_bRunning)
 			do
 			{	
 				++icount > 1 ? pt->AddInfo("验证码错误，请重新输入") : "";
-				pt->OnBtnRcode(); // 获取验证码
-				WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
+				
+				if (strrandcode.empty())
+				{
+					pt->OnBtnRcode(); // 获取验证码
+					WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
+				}
+				
 				if (!pt->m_bRunning) // 此票不满意，重新刷票，需要退出线程
 				{
 					pt->AddInfo("退出刷票");
@@ -1073,8 +1078,9 @@ while (pt->m_bRunning)
 				{
 					strtmp = str_format("randCode=%s&rand=sjrand&_json_att=", pt->m_strRCode);
 					creq->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strtmp, strack);
-					_sleep(100);
-				}				
+					_sleep(10);
+				}
+				strrandcode = "";
 			}while (strack.find("\"data\":\"Y\"") == string::npos);
 
 			// /otn/confirmPassenger/confirmSingleForQueueAsys
@@ -1102,7 +1108,8 @@ while (pt->m_bRunning)
 			while (strack.empty())
 			{
 				GetLocalTime(&st);
-				creq->http_get(str_format("/otn/confirmPassenger/queryOrderWaitTime?random=%u%u&tourFlag=dc&_json_att=", time(NULL), st.wMilliseconds), strack);
+				creq->http_get(str_format("/otn/confirmPassenger/queryOrderWaitTime?random=%u%u&tourFlag=dc&_json_att="
+					, time(NULL), st.wMilliseconds), strack);
 				if (jread.parse(strack, jvalue))
 				{					
 					if (!jvalue["data"]["orderId"].isNull())
@@ -1217,6 +1224,7 @@ void CGetTicketDlg::OnBtnRcode()
 	{
 		return;
 	}
+	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("加载中");
 	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(FALSE); // 无法输入
 	m_cbtn.EnableWindow(FALSE); // 无法点击	
 	SetDlgItemText(IDC_EDIT_RCODE, "加载中");
@@ -1232,10 +1240,10 @@ void CGetTicketDlg::OnBtnRcode()
 	m_cbtn.Reflush();
 	m_cbtn.EnableWindow(TRUE);	
 	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(TRUE);
-	SetDlgItemText(IDC_EDIT_RCODE, "");	
+	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("");	
 	ShowWindow(SW_SHOWNORMAL);
 	SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-	SetTimer(1, 500, NULL);
+	SetTimer(1, 10, NULL);
 }
 
 void CGetTicketDlg::OnTimer(UINT nIDEvent) 
@@ -1256,6 +1264,26 @@ void CGetTicketDlg::OnBtnGetticket()
 	}
 	SetWindowPos(&CWnd::wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	strrandcode = m_strRCode;
+	if (m_bRunning)
+	{
+		// 检查验证码：先输入
+		// 效验验证码
+		string strack = "";
+		string strtmp;
+		int icount = 0;
+		do
+		{
+			++icount > 1 ? OnBtnRcode() : AddInfo("预先输入验证码操作");
+			strtmp = str_format("randCode=%s&rand=sjrand&_json_att=", m_strRCode);
+			while (strack.empty())
+			{				
+				creq->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strtmp, strack);
+				_sleep(10);
+			}
+		}while (strack.find("\"data\":\"Y\"") == string::npos);
+		GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("已输入");
+		GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(FALSE);
+	}
 	SetEvent(m_hdWaitCode);
 }
 
