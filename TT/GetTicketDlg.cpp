@@ -1132,7 +1132,8 @@ while (pt->m_bRunning)
 				continue;
 			}
 
-			
+			pt->AddInfo("订票成功，请登陆网站及时支付！");
+			pt->alertexit();
 
 			// -- begin 手动提交 --
 			/*

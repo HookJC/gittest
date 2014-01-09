@@ -102,14 +102,12 @@ BOOL CLoginDlg::OnInitDialog()
 UINT CLoginDlg::ThreadLoadInit(LPVOID lpVoid)
 {
 	CLoginDlg* pT = (CLoginDlg* )lpVoid;
-	pT->m_bLogin = TRUE;
 	// 加载页面及验证码
 	string strret;
 	//strret = creq_->GetLoginuiKey("/otn/login/init");	// 初始化登陆页面
 
 	pT->OnBtnRcode(); // 加载验证码: 含Cookie
 
-	pT->m_bLogin = FALSE;
 	return 0;
 }
 
@@ -187,11 +185,6 @@ void CLoginDlg::OnBtnRcode()
 
 BOOL CLoginDlg::LoginTicket()
 {
-	if (m_bLogin)
-	{
-		return FALSE;
-	}	
-
 	// 验证
 	if (m_strUserName.IsEmpty())
 	{
@@ -203,9 +196,14 @@ BOOL CLoginDlg::LoginTicket()
 		GetDlgItem(IDC_EDIT_PSWORD)->SetFocus();
 		return FALSE;
 	}
-	if (m_strRCode.IsEmpty() || m_strRCode.GetLength() < 4)
+	if (m_strRCode.IsEmpty() || m_strRCode.GetLength() != 4)
 	{
 		GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
+		return FALSE;
+	}
+
+	if (m_bLogin)
+	{
 		return FALSE;
 	}
 	
@@ -356,6 +354,7 @@ void CLoginDlg::OnTimer(UINT nIDEvent)
 	{
 		if (m_bLogin)
 		{
+			KillTimer(2);
 			CDialog::OnOK();
 		}		
 	}
