@@ -44,6 +44,12 @@
 #define IDC_CHECK9                      1034
 #define IDC_CHECK10                     1035
 #define IDC_CHECK21                     1036
+#define IDC_STATIC_DATE                 1037
+#define IDC_CHECK11                     1038
+#define IDC_CHECK12                     1039
+#define IDC_CHECK13                     1040
+#define IDC_CHECK14                     1041
+#define IDC_CHECK15                     1042
 #define IDS_USERNAME                    57345
 
 // Next default values for new objects
@@ -52,7 +58,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1037
+#define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
