@@ -191,10 +191,116 @@ int CSocketHTTPRequest::recvchar(char* charreads, int iread)
 		}
 	}
 
-	close();
+	//close();
 
 	return icount;
 }
+
+/************************************************************************/
+// 短连接，支持多线程
+SOCKET CSocketHTTPRequest::open_socket(const string& strip, unsigned short usport)
+{
+	SOCKET so;
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_addr.S_un.S_addr = inet_addr(strip.c_str());
+	addr.sin_port = htons(usport);
+	
+	so = socket(AF_INET, SOCK_STREAM, 0);	
+	
+	if (so < 0)
+	{
+		return -1;
+	}
+	
+	if (connect(so, (struct sockaddr* )&addr, sizeof(struct sockaddr_in)) == SOCKET_ERROR)
+	{
+		return -2;
+	}
+	
+	return so;
+}
+
+int CSocketHTTPRequest::send_socket_data(const char* pszdata, unsigned long ulsize, SOCKET so)
+{
+	return send(so, pszdata, ulsize, 0);
+}
+
+int CSocketHTTPRequest::recv_socket_data(char* charreads, int iread, SOCKET so)
+{
+	int icount = 0;
+	int iret = 0;
+	
+	char* pszlen = NULL;
+	int ilength = 0;
+	int ibodylen = 0;
+	int ichunklen = 0;
+	bool bchunked = false;
+	bool blength = false;
+	
+	char m_szbuf[MAX_BUFFER_BLOCK + 1] = {0};
+	memset(m_szbuf, 0, sizeof(m_szbuf));
+	while ((iret = recv(so, m_szbuf, MAX_BUFFER_BLOCK, 0)) > 0)
+	{
+		memcpy(charreads + icount, m_szbuf, iret);
+		icount += iret;
+		memset(m_szbuf, 0, iret);
+		if (icount + MAX_BUFFER_BLOCK > iread)
+		{
+			break;
+		}
+		
+		if (blength)
+		{
+			ibodylen += iret;
+			if (ibodylen >= ilength)
+			{
+				break;
+			}
+		}		
+		
+		if (!bchunked && !blength)
+		{
+			if ((pszlen = strstr(charreads, "Content-Length: ")) != NULL)
+			{
+				blength = true;
+				pszlen += strlen("Content-Length: ");
+				ilength = atoi(pszlen);
+				if (ilength == 0) //头响应包
+				{
+					break;
+				}
+				ibodylen = iret - (strstr(charreads, "\r\n\r\n") - charreads + 4);
+				if (ibodylen >= ilength) // 首次完整包
+				{
+					break;
+				}
+			}
+			else
+			{
+				bchunked = true;
+			}
+		}
+		
+		if (bchunked)
+		{
+			if (icount - 4 > 1 && strcmp(charreads + icount - 4 - 1, "0\r\n\r\n") == 0)
+			{
+				break;
+			}
+		}
+	}
+	
+#ifdef WIN32		
+	closesocket(so);
+#else if LINUX
+	close(so);
+#endif
+	
+	return icount;
+}
+/************************************************************************/
+
 
 int CSocketHTTPRequest::sendandrecv(const string& strip, unsigned short usport, const string& strdata, string& strrecv)
 {

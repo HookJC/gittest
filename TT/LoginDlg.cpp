@@ -108,7 +108,7 @@ BOOL CLoginDlg::OnInitDialog()
 
 	SetTimer(1, 1000, NULL);
 
-	return TRUE;  // return TRUE unless you set the focus to a control
+	return FALSE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
 }
 

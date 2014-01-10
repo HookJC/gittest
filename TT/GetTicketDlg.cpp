@@ -269,6 +269,7 @@ BEGIN_MESSAGE_MAP(CGetTicketDlg, CDialog)
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_CHECK6, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK1, OnCheckTrainType)
+	ON_BN_CLICKED(IDC_CHECK21, OnNotShowLog)
 	ON_BN_CLICKED(IDC_CHECK7, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK8, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK9, OnCheckTrainNo)
@@ -277,7 +278,7 @@ BEGIN_MESSAGE_MAP(CGetTicketDlg, CDialog)
 	ON_BN_CLICKED(IDC_CHECK3, OnCheckTrainType)
 	ON_BN_CLICKED(IDC_CHECK4, OnCheckTrainType)
 	ON_BN_CLICKED(IDC_CHECK5, OnCheckTrainType)
-	ON_BN_CLICKED(IDC_CHECK21, OnNotShowLog)
+	ON_WM_ACTIVATE()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -334,7 +335,7 @@ BOOL CGetTicketDlg::OnInitDialog()
 
 	SetTimer(1, 1000, NULL);
 	
-	return TRUE;  // return TRUE  unless you set the focus to a control
+	return FALSE;  // return TRUE  unless you set the focus to a control
 }
 
 void CGetTicketDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -963,9 +964,9 @@ while (pt->m_bRunning)
 				|| trainCodeText.find(str_format("#%s#", stqtrains.stlist[i].sztrain_no).c_str()) != string::npos)
 			{
 				// 匹配座位 默认硬座 usseatidx = 8 // 选定座席有票或者剩余多少张
-				if (usseatidx == 10) // 有票就订
+				if (usseatidx == 10) // 有票就订: 非商务座
 				{
-					for (j = 0; j < TICKET_SIGN_LEN; ++j)
+					for (j = 1; j < TRAIN_TICKET_TYPE; ++j)
 					{
 						if (strcmp(stqtrains.stlist[i].szTicket[j], "有") == 0  || atoi(stqtrains.stlist[i].szTicket[j]) > 0)
 						{
@@ -1247,7 +1248,9 @@ void CGetTicketDlg::OnGetRanCodeImg() // 获取图片
 {
 	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("加载中");
 	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(FALSE); // 无法输入
+
 	m_cbtn.EnableWindow(FALSE); // 无法点击	
+
 	bool bget = false;
 	do
 	{
@@ -1256,13 +1259,19 @@ void CGetTicketDlg::OnGetRanCodeImg() // 获取图片
 			AddInfo("输入验证码...");			
 			break;
 		}					
-	}while(!bget);	
+	}while(!bget);
+	
 	m_cbtn.Reflush();
-	m_cbtn.EnableWindow(TRUE);	
-	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(TRUE);
-	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("");	
-	ShowWindow(SW_SHOWNORMAL);
+	m_cbtn.EnableWindow(TRUE);
+	
+	ShowWindow(SW_SHOWNORMAL);	
 	SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	ActiveTheWnd();
+
+	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(TRUE);
+	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("");
+	GetDlgItem(IDC_EDIT_RCODE)->SetFocus();	
+	
 	SetTimer(1, 1000, NULL);
 }
 
@@ -1276,15 +1285,14 @@ UINT CGetTicketDlg::ThreadGetRandCodeImg(LPVOID lpVoid)
 void CGetTicketDlg::OnBtnRcode() 
 {
 	// TODO: Add your control notification handler code here	
-	AfxBeginThread(ThreadGetRandCodeImg, this);
+	AfxBeginThread(ThreadGetRandCodeImg, this);	
 }
 
 void CGetTicketDlg::OnTimer(UINT nIDEvent) 
 {
 	if (nIDEvent == 1)
 	{
-		KillTimer(1);
-		GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
+		KillTimer(1);		
 		SetWindowPos(&CWnd::wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	}
 	else if (nIDEvent == 2)
@@ -1346,6 +1354,7 @@ void CGetTicketDlg::OnBtnGetticket()
 				SetDlgItemText(IDC_EDIT_RCODE, "");
 				return;
 			}
+			AddInfo("预先验证验证码...");
 			strtmp = str_format("randCode=%s&rand=sjrand&_json_att=", m_strRCode);
 			while (strack.empty())
 			{				
@@ -1396,7 +1405,12 @@ BOOL CGetTicketDlg::PreTranslateMessage(MSG* pMsg)
 		}
 		if (pMsg->wParam == VK_RETURN)
 		{
+			if (m_bRunning)
+			{
+				GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
+			}
 			OnBtnRunning();
+									
 			return TRUE;
 		}
 	}
@@ -1513,4 +1527,33 @@ void CGetTicketDlg::OnNotShowLog()
 {
 	// TODO: Add your control notification handler code here
 	m_bNotShowLog = ((CButton* )GetDlgItem(IDC_CHECK21))->GetCheck();
+}
+
+void CGetTicketDlg::ActiveTheWnd()
+{
+	if (this != GetForegroundWindow())                                // 比较当前的程序的指针 不等于 当前系统激活窗口的指针 话，就自动置顶并激活
+	{
+		this->ShowWindow(SW_RESTORE);                                // 此API是为了在窗口最小化下恢复显示（相当于置顶），我的设计窗口没有最大化，自己根据情况改
+		HWND hCurWnd = NULL; 
+		DWORD lMyID; 
+		DWORD lCurID; 
+		hCurWnd = ::GetForegroundWindow(); 
+		lMyID = ::GetCurrentThreadId(); 
+		lCurID = ::GetWindowThreadProcessId(hCurWnd, NULL); 
+		::AttachThreadInput(lMyID, lCurID, TRUE);                     // 连接当前激活窗口和我们将要激活窗口的输入队列
+		this->SetForegroundWindow();                                 // 此API 激活我们的窗口，但是没有AttachThreadInput的话，就不能正常的对窗口互动
+		::AttachThreadInput(lMyID, lCurID, FALSE);                    // 关闭输入队列后实现我们窗口的输入队列激活
+	}
+}
+
+void CGetTicketDlg::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized) 
+{
+	CDialog::OnActivate(nState, pWndOther, bMinimized);
+	
+	// TODO: Add your message handler code here
+	if (m_bRunning)
+	{
+		GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
+	}
+	
 }

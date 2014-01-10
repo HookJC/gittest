@@ -1,12 +1,11 @@
-// 6 
+
 #include <winsock2.h>              // socket 标准头文件
 #include <ws2tcpip.h>              // TCP/IP实现相关(6.1)
 #include <strsafe.h>               // 提供安全的字符串操作(6.2)
 #include <stdio.h>
 #include <stdlib.h>
- 
-#include "resolve.h"
 
+#include "resolve.h" 
 
 // 7
 int PrintAddress(SOCKADDR *sa, int salen)
@@ -149,3 +148,5 @@ int ReverseLookup(SOCKADDR *sa, int salen, char *buf, int buflen)
 	
     return NO_ERROR;
 }
+
+

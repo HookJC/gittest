@@ -79,6 +79,8 @@ public:
 	void OnGetRanCodeImg(); // 获取图片
 	static UINT ThreadGetRandCodeImg(LPVOID lpVoid);
 
+	void ActiveTheWnd();
+
 /************************************************************************/
 // 临时方法
 	CString Gettrain_date(const char* pszdate);
@@ -117,6 +119,7 @@ protected:
 	afx_msg void OnCheckTrainNo();
 	afx_msg void OnCheckTrainType();
 	afx_msg void OnNotShowLog();
+	afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

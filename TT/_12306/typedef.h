@@ -231,6 +231,8 @@ typedef struct _WAP_BAIDU_ATTENTION_LIST
 //                           12306订票
 /************************************************************************/
 
+#define MT_THREAD							// 启用多线程
+
 #define MAX_TRAIN_NO 5						// 车次
 #define MAX_CITY_LEN 10						// 站点
 #define MAX_TIME_LEN 8						// 时间

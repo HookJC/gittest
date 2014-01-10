@@ -66,6 +66,9 @@ private:
 	tpfhttpmap m_sessionmap;
 	string		m_strsess;
 
+	string m_strip;
+	unsigned short m_usport;
+
 	// https
 	COpensslHttpsClt m_chttps;
 };

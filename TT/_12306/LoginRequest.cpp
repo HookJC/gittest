@@ -5,6 +5,12 @@
 #include "api/HandleCode.h"
 #include "shlwapi.h"
 
+#ifdef MT_THREAD
+#ifdef USE_HTTPS
+#undef USE_HTTPS
+#endif
+#endif
+
 #define MAX_RSP_BLOCK	10240
 #define URL_PAGE_PORT 80
 
@@ -45,7 +51,9 @@ CLoginRequest::~CLoginRequest()
 
 bool CLoginRequest::init(const string& strip, unsigned short usport, const string& strsignfile)
 {
-	
+	m_strip = strip;
+	m_usport = usport;
+
 #ifdef USE_HTTPS
 	m_chttps.set_https_cerfile(strsignfile.c_str());
 
@@ -79,16 +87,30 @@ int CLoginRequest::sendandrecv(const string& strdata, string& strrecv)
 	int iret = 0;
 	char szblock[MAX_ACK_RSP_LEN + 1] = {0};
 
+#ifdef MT_THREAD
+	SOCKET so = open_socket(m_strip, m_usport);
+	iret = send_socket_data(strdata.c_str(), strdata.size(), so);
+#else
 	iret = senddata(strdata.c_str(), strdata.size());
+#endif
 	if (iret < 0) 
 	{
 #ifdef USE_HTTPS
 		if (m_chttps.https_connect())
 #else
+#ifdef MT_THREAD
+		so = open_socket(m_strip, m_usport);
+		if (so > 0)
+#else
 		if (reconn() == 0)
 #endif
+#endif
 		{
+#ifdef MT_THREAD
+			iret = send_socket_data(strdata.c_str(), strdata.size(), so);
+#else
 			iret = senddata(strdata.c_str(), strdata.size());
+#endif
 		}
 		else
 		{
@@ -97,14 +119,19 @@ int CLoginRequest::sendandrecv(const string& strdata, string& strrecv)
 			return -1;
 		}			
 	}
-
+#ifdef MT_THREAD
+	iret = recv_socket_data(szblock, MAX_ACK_RSP_LEN, so);
+#else
 	iret = recvdata(szblock, MAX_ACK_RSP_LEN);	
+#endif
 	if (iret < 0)
 	{
 #ifdef USE_HTTPS
 		if (!m_chttps.https_connect())
 #else
+#ifndef MT_THREAD
 			if (reconn() != 0)
+#endif
 #endif
 			{
 				strrecv = "sendandrecv recv https_reconn error. Error code: -2.";
@@ -183,10 +210,24 @@ bool CLoginRequest::GetVertifyImg(const string& strfixpath, const string& strfil
 
 	
 	int iret = 0;	
+#ifdef MT_THREAD
+	SOCKET so = open_socket(m_strip, m_usport);
+	iret = send_socket_data(strReq.c_str(), strReq.size(), so);
+#else
 	iret = senddata(strReq.c_str(), strReq.size());
+#endif
+	
 	if (iret < 0)
 	{
-		if (m_chttps.https_connect()/*reconn() == 0*/)
+#ifdef USE_HTTPS
+		if (m_chttps.https_connect())
+#else
+#ifndef MT_THREAD
+		if (reconn() == 0)
+#endif
+#endif
+
+#ifndef MT_THREAD
 		{
 			iret = senddata(strReq.c_str(), strReq.size());
 			if (iret < 0)
@@ -195,21 +236,30 @@ bool CLoginRequest::GetVertifyImg(const string& strfixpath, const string& strfil
 			}
 		}
 		else
+#endif
 		{
 			return false;
 		}		
 	}
-	
+#ifdef MT_THREAD
+	iret = recv_socket_data(szrecvbuff, sizeof(szrecvbuff) - 1, so);
+#else
 	iret = recvdata(szrecvbuff, sizeof(szrecvbuff) - 1);
+#endif
+
 #ifdef USE_HTTPS
 	if (iret < 0 && !m_chttps.https_connect())
 #else
+#ifndef MT_THREAD
 	if (iret < 0 && reconn() != 0)
+#endif  // MT_THREAD
 #endif // USE_HTTPS	
+#ifndef MT_THREAD
 	{
 		return false;
 	}
 	else
+#endif
 	{
 		m_chrspsocket.parse(szrecvbuff);
 		m_strsess = m_chrspsocket.getval("Set-Cookie");

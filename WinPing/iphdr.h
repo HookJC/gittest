@@ -2,67 +2,148 @@
 #ifndef __IP_HDR_H__
 #define __IP_HDR_H__
 
-//-----------------------iphdr.h-----------------------//
-//源码分析将忽略ipv6
+/* Navn IRC bot -- Protocol header definitions used by trace route (ICMP raw sockets)
+ *
+ * (C) 2011-2012 Azuru
+ * Contact us at Development@Azuru.net
+ *
+ * Please read COPYING and README for further details.
+ *
+ * Based on the original code of Anope by The Anope Team.
+ */
 
-//边界对齐至字节
+#ifdef _WIN32
+// Set alignment boundary to 1 byte
 #include <pshpack1.h>
 
-// 1 -- ipv4 头部
-typedef struct ip_hdr
+// IPv4 header
+typedef struct iphdr
 {
-    unsigned char  ip_verlen;       // 前4位IP版本号(IPv4 或者IPv6)
-	// 后4位头部长度(32位，4字节)（1.1）
-    unsigned char  ip_tos;          // 前3位为优先级，后5位为服务类型（1.2）
-    unsigned short ip_totallength;  // 16位包总长度包括头部和数据(字节)（1.3）
-    unsigned short ip_id;           // 16位ID标识
-    unsigned short ip_offset;       // 前3位为分段标识，后5位为分段偏移
-    unsigned char  ip_ttl;          // 该包可经过的路由器数量上限
-    unsigned char  ip_protocol;     // 协议类型（TCP，UDP，ICMP，IGMP等）
-    unsigned short ip_checksum;     // ipv4 头部的校验和
-    unsigned int   ip_srcaddr;      // ipv4 源地址
-    unsigned int   ip_destaddr;     // ipv4 目的地址
-} IPV4_HDR, *PIPV4_HDR, FAR * LPIPV4_HDR;
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+        unsigned char  ihl: 4;        //
+        unsigned char  version: 4;    // 4-bit IPv4 version
+        // 4-bit header length (in 32-bit words)
+#elif __BYTE_ORDER == __BIG_ENDIAN
+        unsigned char  version: 4;    // 4-bit IPv4 version
+        // 4-bit header length (in 32-bit words)
+        unsigned char  ihl: 4;        //
+#else
+# error "Your systems ENDIANNESS is broken, please fix!"
+#endif
 
-// 2 -- ipv4 选项头部
+        unsigned char  tos;           // IP type of service
+        unsigned short tot_len;       // Total length
+        unsigned short id;            // Unique identifier
+        unsigned short offset;        // Fragment offset field
+        unsigned char  ttl;           // Time to live
+        unsigned char  protocol;      // Protocol(TCP,UDP etc)
+        unsigned short check;         // IP checksum
+        unsigned int   saddr;         // Source address
+        unsigned int   daddr;         // Source address
+} IPV4_HDR, *PIPV4_HDR, FAR *LPIPV4_HDR;
+
+// IPv4 option header
 typedef struct ipv4_option_hdr
 {
-    unsigned char   opt_code;          // ipv4 选项头类型
-    unsigned char   opt_len;           // ipv4 选项头长度
-    unsigned char   opt_ptr;           // ipv4 选项头指针
-    unsigned long   opt_addr[9];       // ipv4 9个地址列表(2.1)
+        unsigned char   opt_code;           // option type
+        unsigned char   opt_len;            // length of the option header
+        unsigned char   opt_ptr;            // offset into options
+        unsigned long   opt_addr[9];        // list of IPv4 addresses
 } IPV4_OPTION_HDR, *PIPV4_OPTION_HDR, FAR *LPIPV4_OPTION_HDR;
 
-// 3 -- icmp 头部
-typedef struct icmp_hdr
+// ICMPv6 echo request body
+typedef struct icmpv6_echo_request
 {
-    unsigned char   icmp_type;            // icmp 类型
-    unsigned char   icmp_code;            // ipv4 码
-    unsigned short  icmp_checksum;        // icmp 头部及数据校验和
-    unsigned short  icmp_id;              // icmp id标识(3.1)
-    unsigned short  icmp_sequence;        // icmp 序列号，请求回应消息对
+        struct
+        {
+                unsigned short  id;
+                unsigned short  sequence;
+        } echo;
+} ICMPV6_ECHO_REQUEST;
+
+// ICMP header
+typedef struct icmphdr
+{
+        unsigned char   type;
+        unsigned char   code;
+        unsigned short  checksum;
+        unsigned short  id;
+        unsigned short  sequence;
+        unsigned long   timestamp;
+        icmpv6_echo_request un;
 } ICMP_HDR, *PICMP_HDR, FAR *LPICMP_HDR;
 
-// 4 -- udp 头部（此头部未在程序中用到）
+struct in6_addr {
+    unsigned char s6_addr[16];              /* IPv6  address */
+};
+
+// IPv6 protocol header
+typedef struct ipv6_hdr
+{
+        unsigned long   ipv6_vertcflow;        // 4-bit IPv6 version
+        // 8-bit traffic class
+        // 20-bit flow label
+        unsigned short  ipv6_payloadlen;       // payload length
+        unsigned char   ipv6_nexthdr;          // next header protocol value
+        unsigned char   ipv6_hoplimit;         // TTL
+        struct in6_addr ipv6_srcaddr;          // Source address
+        struct in6_addr ipv6_destaddr;         // Destination address
+} IPV6_HDR, *PIPV6_HDR, FAR *LPIPV6_HDR;
+
+// IPv6 fragment header
+typedef struct ipv6_fragment_hdr
+{
+        unsigned char   ipv6_frag_nexthdr;
+        unsigned char   ipv6_frag_reserved;
+        unsigned short  ipv6_frag_offset;
+        unsigned long   ipv6_frag_id;
+} IPV6_FRAGMENT_HDR, *PIPV6_FRAGMENT_HDR, FAR *LPIPV6_FRAGMENT_HDR;
+
+// ICMPv6 header
+typedef struct icmpv6_hdr
+{
+        unsigned char   icmp6_type;
+        unsigned char   icmp6_code;
+        unsigned short  icmp6_checksum;
+} ICMPV6_HDR;
+
+// Define the UDP header
 typedef struct udp_hdr
 {
-    unsigned short src_portno;            // 源端口
-    unsigned short dst_portno;            // 目的端口
-    unsigned short udp_length;            // udp 包总长度(字节)
-    unsigned short udp_checksum;          // udp 头部以及数据校验和(4.1)
+	unsigned short src_portno;       // Source port no.
+	unsigned short dst_portno;       // Dest. port no.
+	unsigned short udp_length;       // Udp packet length
+	unsigned short udp_checksum;     // Udp checksum (optional)
 } UDP_HDR, *PUDP_HDR;
 
-// 5 -- ipv4  路径记录宏
-#define IP_RECORD_ROUTE     0x7            
+#define IP_RECORD_ROUTE     0x7
 
-// icmp 类型和码(5.1)
-#define ICMPV4_ECHO_REQUEST_TYPE   8        // icmp  回显请求类型
-#define ICMPV4_ECHO_REQUEST_CODE   0        // icmp  回显请求码
-#define ICMPV4_ECHO_REPLY_TYPE     0        // icmp  回显回应类型
-#define ICMPV4_ECHO_REPLY_CODE     0        // icmp  回显回应码
-#define ICMPV4_MINIMUM_HEADER      8        // icmp  最小头部
+// ICMP6 protocol value
+#define IPPROTO_ICMP6       58
 
-// 恢复默认对齐方式
+// ICMP types and codes
+#define ICMPV4_ECHO_REQUEST_TYPE   8
+#define ICMPV4_ECHO_REQUEST_CODE   0
+#define ICMPV4_ECHO_REPLY_TYPE     0
+#define ICMPV4_ECHO_REPLY_CODE     0
+
+#define ICMPV4_DESTUNREACH    3
+#define ICMPV4_SRCQUENCH      4
+#define ICMPV4_REDIRECT       5
+#define ICMP_ECHO           8
+#define ICMPV4_TIMEOUT       11
+#define ICMPV4_PARMERR       12
+
+// ICMP6 types and codes
+#define ICMPV6_ECHO_REQUEST_TYPE   128
+#define ICMPV6_ECHO_REQUEST_CODE   0
+#define ICMPV6_ECHO_REPLY_TYPE     129
+#define ICMPV6_ECHO_REPLY_CODE     0
+#define ICMPV6_TIME_EXCEEDED_TYPE  3
+#define ICMPV6_TIME_EXCEEDED_CODE  0
+
+// Restore byte alignment to compile default
 #include <poppack.h>
+#endif
 
 #endif

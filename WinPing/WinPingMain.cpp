@@ -1,6 +1,3 @@
-
-#include <stdio.h>
-
 // 64位架构
 #ifdef _IA64_
 #pragma warning (disable: 4267)
@@ -9,7 +6,7 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-
+ 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <stdio.h>
@@ -30,14 +27,7 @@ int   gDataSize=DEFAULT_DATA_SIZE;
 BOOL  bRecordRoute=FALSE;               //  是否记录路由
 char *gDestination=NULL,               
 recvbuf[MAX_RECV_BUF_LEN];       
-int   recvbuflen = MAX_RECV_BUF_LEN; 
-
-/************************************************************************/
-// struct 
-
-
-/************************************************************************/
-
+int   recvbuflen = MAX_RECV_BUF_LEN;
 
 //  ping 命令使用方法
 void usage(char *progname)
@@ -322,7 +312,6 @@ int SetTtl(SOCKET s, int ttl)
     return rc;
 }
 
-
 // 9
 int __cdecl main(int argc, char **argv)
 {
@@ -570,3 +559,38 @@ EXIT:
  
     return status;
 }
+
+
+/***************************************************************************
+struct sockaddr {
+	u_short sa_family;             // 2字节
+	char    sa_data[14];           // 14字节
+};
+
+typedef struct addrinfo
+{
+	int                 ai_flags;      
+	int                 ai_family;      
+    int                 ai_socktype;   
+    int                 ai_protocol;   
+    size_t              ai_addrlen;    
+    char *              ai_canonname;  
+    struct sockaddr *   ai_addr;      
+    struct addrinfo *   ai_next;      
+};
+
+struct sockaddr_in {
+	short   sin_family;         // 2字节
+	u_short sin_port;           // 2字节
+	struct  in_addr sin_addr;   // 4字节
+	char    sin_zero[8];        // 8字节填充
+};
+
+struct in_addr {      // 4字节
+	union {
+		struct { u_char s_b1,s_b2,s_b3,s_b4; }                     S_un_b;
+		struct { u_short s_w1,s_w2; } S_un_w;
+		u_long S_addr;
+	} S_un;
+};
+**************************************************************************/
