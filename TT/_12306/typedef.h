@@ -239,7 +239,7 @@ typedef struct _WAP_BAIDU_ATTENTION_LIST
 #define SUBMIT_CODE_LEN 300					// 预定提交编码
 #define MAX_LOAD_DATA 50					// 一次查询车次数量
 
-#define MAX_TRAIN_PASSENGER 20
+#define MAX_TRAIN_PASSENGER 30
 #define MAX_PASSENGER_NAME 10
 #define MAX_PASSENGER_IDNO 35
 #define MAX_MOBILE_LEN 11

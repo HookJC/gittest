@@ -66,7 +66,7 @@ BOOL CGetTicketApp::InitInstance()
 	CHandleCode::UTF8ToGBK(sbtr);
 
 	//只能启动一个程序
-	HANDLE hMutex=CreateMutex(NULL,FALSE,"RunOnlyOneInstance_GETTICKETS");
+	/*HANDLE hMutex=CreateMutex(NULL,FALSE,"RunOnlyOneInstance_GETTICKETS");
     if( hMutex==NULL || ERROR_ALREADY_EXISTS==::GetLastError()) 
     {
 		HWND hWnd = ::FindWindow(NULL, "订票工具");
@@ -81,7 +81,7 @@ BOOL CGetTicketApp::InitInstance()
 			AfxMessageBox("程序已经启动，请检测后重试！");
 		}
         exit(1);     
-    }
+    }*/
 
 	char szAppPath[MAX_PATH + 1] = {0};
 	::GetModuleFileName(NULL, szAppPath, MAX_PATH);

@@ -191,13 +191,15 @@ string gettickinfo(const string& strtickinfo, const string& strseattype)
 /////////////////////////////////////////////////////////////////////////////
 // CGetTicketDlg dialog
 
-#define MAX_TICKET_LENGTHS 32
+#define MAX_TICKET_LENGTHS 28
 
 void CGetTicketDlg::alertexit()
 {
+#ifdef USE_HTTPS
 	creq->https_close_connect();
+#endif
 	AfxMessageBox("程序运行结束，点击确认退出。。。");	
-	CDialog::OnOK();
+	SendMessage(WM_CLOSE);
 }
 
 CGetTicketDlg::CGetTicketDlg(CWnd* pParent /*=NULL*/)
@@ -218,6 +220,7 @@ CGetTicketDlg::CGetTicketDlg(CWnd* pParent /*=NULL*/)
 	m_uiTmSubmitTicket = 0;
 	m_strStartTime = _T("");
 	m_strEndTime = _T("");
+	m_bNotShowLog = FALSE;
 	//}}AFX_DATA_INIT
 	// Note that LoadIcon does not require a subsequent DestroyIcon in Win32
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -247,6 +250,7 @@ void CGetTicketDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_TMSUBMITTICKET, m_uiTmSubmitTicket);
 	DDX_CBString(pDX, IDC_COMBO_STARTTIME, m_strStartTime);
 	DDX_CBString(pDX, IDC_COMBO_ENDTIME, m_strEndTime);
+	DDX_Check(pDX, IDC_CHECK21, m_bNotShowLog);
 	//}}AFX_DATA_MAP
 }
 
@@ -259,15 +263,21 @@ BEGIN_MESSAGE_MAP(CGetTicketDlg, CDialog)
 	ON_BN_CLICKED(IDC_BTN_RUNNING, OnBtnRunning)
 	ON_BN_CLICKED(IDC_BTN_RCODE, OnBtnRcode)
 	ON_WM_TIMER()
-	ON_BN_CLICKED(IDC_BTN_GETTICKET, OnBtnGetticket)
+	ON_BN_CLICKED(IDC_BTN_GETTICKET, OnLoginOut)
 	ON_EN_CHANGE(IDC_EDIT_RCODE, OnChangeEditRcode)
 	ON_BN_CLICKED(IDC_BTN_REFPASSENGER, OnBtnRefpassenger)
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_CHECK6, OnCheckTrainNo)
+	ON_BN_CLICKED(IDC_CHECK1, OnCheckTrainType)
 	ON_BN_CLICKED(IDC_CHECK7, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK8, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK9, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK10, OnCheckTrainNo)
+	ON_BN_CLICKED(IDC_CHECK2, OnCheckTrainType)
+	ON_BN_CLICKED(IDC_CHECK3, OnCheckTrainType)
+	ON_BN_CLICKED(IDC_CHECK4, OnCheckTrainType)
+	ON_BN_CLICKED(IDC_CHECK5, OnCheckTrainType)
+	ON_BN_CLICKED(IDC_CHECK21, OnNotShowLog)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -310,7 +320,7 @@ BOOL CGetTicketDlg::OnInitDialog()
 	
 	// 初始化
 	m_cbtn.SubclassWindow(GetDlgItem(IDC_BTN_RCODE)->m_hWnd);
-	m_trainlist.SubclassWindow(GetDlgItem(IDC_LIST_TICKETS)->m_hWnd);
+	// m_trainlist.SubclassWindow(GetDlgItem(IDC_LIST_TICKETS)->m_hWnd);
 	m_trainlist.m_strMatchBlueColor = "Y";
 	InitParam();
 	InitManList();
@@ -321,6 +331,8 @@ BOOL CGetTicketDlg::OnInitDialog()
 
 	// 获取乘客
 	AfxBeginThread(GetPassernger, this);
+
+	SetTimer(1, 1000, NULL);
 	
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -395,10 +407,13 @@ void CGetTicketDlg::AddInfo(const char* fmt, ...)
 	strrowinfo += " ";
 	strrowinfo += szinfo;
 	
-	strShowInfo += strrowinfo.c_str();
-	strShowInfo += "\r\n";
-	SetDlgItemText(IDC_ST_INFO, strShowInfo);
-	m_cInfo.LineScroll(m_cInfo.GetLineCount());
+	if (!m_bNotShowLog)
+	{
+		strShowInfo += strrowinfo.c_str();
+		strShowInfo += "\r\n";
+		SetDlgItemText(IDC_ST_INFO, strShowInfo);
+		m_cInfo.LineScroll(m_cInfo.GetLineCount());
+	}
 	
 	// 写日志
 	write_to_file(g_strapppath  + "\\" + date("Ymd") + ".txt", strrowinfo);
@@ -472,7 +487,7 @@ void CGetTicketDlg::InitParam()
 	{
 		vector<string> VecTN;
 		str_explode(sztmp, "#", VecTN);
-		for (int i = 0, int j = 0; i < VecTN.size() && j < 5; ++i)
+		for (int i = 0, j = 0; i < VecTN.size() && j < 5; ++i)
 		{
 			if (VecTN[i].empty())
 			{
@@ -483,8 +498,9 @@ void CGetTicketDlg::InitParam()
 			((CButton* )GetDlgItem(IDC_CHECK6 + j))->SetWindowText(VecTN[i].c_str());
 			++j;
 		}
-	}
-	m_trainlist.m_strMatchRedColor = m_strTrainNo;
+		m_trainlist.m_strMatchRedColor = m_strTrainNo;
+		m_strTrainNo = m_strTrainNo.Mid(1, m_strTrainNo.GetLength() - 2);
+	}	
 
 	CMemory_Conf::instance()->get_conf_str("配置", "姓名", "", sztmp, MAX_BUFFER_BLOCK);
 	m_strName = sztmp;
@@ -502,8 +518,9 @@ void CGetTicketDlg::InitParam()
 	CMemory_Conf::instance()->get_conf_str("配置", "手机号", "", sztmp, MAX_BUFFER_BLOCK);
 	m_strMobile = sztmp;
 
-	m_uiTmGetTicket = CMemory_Conf::instance()->get_conf_int("配置", "刷票", 5);
-	m_uiTmSubmitTicket = CMemory_Conf::instance()->get_conf_int("配置", "提单", 3);
+	m_uiTmGetTicket = CMemory_Conf::instance()->get_conf_int("配置", "刷票", 500);
+	m_uiTmSubmitTicket = CMemory_Conf::instance()->get_conf_int("配置", "提单", 5000);
+	m_bNotShowLog = CMemory_Conf::instance()->get_conf_int("配置", "日志显示", 0);
 
 	replace(trainClass, "#", "%23");
 
@@ -516,6 +533,7 @@ void CGetTicketDlg::OnBtnRunning()
 	SetWindowPos(&CWnd::wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	if (m_bRunning)
 	{
+		KillTimer(2);
 		SetDlgItemText(IDC_BTN_RUNNING, "开始");
 		m_bRunning = FALSE;		
 		SetEvent(m_hdWaitCode); //退出原有线程
@@ -585,6 +603,7 @@ void CGetTicketDlg::OnBtnRunning()
 		strseattext = pszseattext[m_nSeatType - 1];
 	}
 
+	// 车型
 	m_strTrainType = "#";
 	for (int i = 0; i < 5; ++i)
 	{
@@ -594,7 +613,7 @@ void CGetTicketDlg::OnBtnRunning()
 			m_strTrainType += "#";
 		}
 	}
-	m_trainlist.m_strMatchRedColor = m_strTrainNo;
+	m_strTrainType = m_strTrainType.Mid(1, m_strTrainType.GetLength() - 2);
 
 	// 车次
 	vector<string> VecTN;
@@ -613,7 +632,13 @@ void CGetTicketDlg::OnBtnRunning()
 	}
 	m_strTrainNo = "#" + m_strTrainNo;
 	m_strTrainNo += "#";
-	trainCodeText = m_strTrainNo;
+	trainCodeText = m_strTrainNo.Mid(1, m_strTrainNo.GetLength() - 2);
+	if (!trainCodeText.empty())
+	{
+		trainCodeText = "#" + trainCodeText;
+		trainCodeText += "#";
+	}
+
 
 	// 保存所有信息
 	CMemory_Conf::instance()->write_conf_str("配置", "出发地", m_strStartCity);
@@ -630,6 +655,7 @@ void CGetTicketDlg::OnBtnRunning()
 	CMemory_Conf::instance()->write_conf_int("配置", "座席", m_nSeatType);
 	CMemory_Conf::instance()->write_conf_int("配置", "刷票", m_uiTmGetTicket);
 	CMemory_Conf::instance()->write_conf_int("配置", "提单", m_uiTmSubmitTicket);
+	CMemory_Conf::instance()->write_conf_int("配置", "日志显示", m_bNotShowLog);
 
 	char szfileconn[4096 + 1] = {0};
 	int iconn = 4096;
@@ -645,6 +671,7 @@ void CGetTicketDlg::OnBtnRunning()
 	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(FALSE);
 	m_nGetTicketTimes = 0;
 	AfxBeginThread(GetTickets, this);
+	SetTimer(2, m_uiTmSubmitTicket, NULL);
 }
 
 void CGetTicketDlg::InitManList()
@@ -663,9 +690,6 @@ void CGetTicketDlg::InitManList()
 	//m_listMan.InsertColumn(0, _T("Y/N"), LVCFMT_CENTER, 30, 0);
 	m_listMan.InsertColumn(0, _T("姓名"), LVCFMT_LEFT, 50, 0);
 	m_listMan.InsertColumn(1, _T("二代身份证"), LVCFMT_LEFT, 126, 0);
-
-	m_listMan.InsertItem(1, "李四");
-	m_listMan.SetItemText(1, 1, "433423199303131413"); //*/
 }
 
 void CGetTicketDlg::InitTicketList()
@@ -765,13 +789,6 @@ UINT CGetTicketDlg::GetPassernger(LPVOID lpVoid)
 					strncpy(trainpassengers.stpassenger[i].szidtype, jlistitem["passenger_id_type_code"].asCString(), MAX_TRAIN_NO); // 证件类型
 					strncpy(trainpassengers.stpassenger[i].szidno, jlistitem["passenger_id_no"].asCString(), MAX_PASSENGER_IDNO);
 					
-					/*printf("%d. %s %s %s %s %s\n"
-						, trainpassengers.uscount
-						, trainpassengers.stpassenger[i].szname
-						, pszpassenger[trainpassengers.stpassenger[i].ustype - 1]
-						, trainpassengers.stpassenger[i].szidtype
-						, trainpassengers.stpassenger[i].szidno
-						, trainpassengers.stpassenger[i].szmobile); //*/
 					pT->m_listMan.InsertItem(i, trainpassengers.stpassenger[i].szname);
 					pT->m_listMan.SetItemText(i, 1, trainpassengers.stpassenger[i].szidno);
 					
@@ -805,25 +822,27 @@ UINT CGetTicketDlg::GetTickets(LPVOID lpVoid)
 	string strtoken;
 	char sztmp[MAX_BUFFER_BLOCK + 1] = {0};
 
-	CGetTicketDlg* pt = (CGetTicketDlg* )lpVoid;
 	
+	string strpassenger;
+	string stroldpassenger;
+	QUERY_DATA_LIST stqtrains;
+	string strtriandate;
+	vector<string> VecTok;
+
+	CGetTicketDlg* pt = (CGetTicketDlg* )lpVoid;
+try{	
 while (pt->m_bRunning)
 {
 	if (pt->m_nGetTicketTimes > 0)
 	{
-		WaitForSingleObject(pt->m_hdWaitCode, pt->m_uiTmGetTicket * 1000);
+		WaitForSingleObject(pt->m_hdWaitCode, pt->m_uiTmGetTicket);
 	}	
 	if (pt->m_bRunning == FALSE)
 	{
 		break;
 	}
 		// TODO: Add your message handler code here and/or call default
-	// 刷票
-	// 查询车次代号 train_no->id暂不实现，直接通过查询出所有车次再筛选
-	//https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=queryststrainall
-	//date=2013-10-03&fromstation=SZQ&tostation=HYQ&starttime=00%3A00--24%3A00
-	//[{"end_station_name":"武汉","end_time":"11:52","id":"6i000G100201","start_station_name":"深圳北","start_time":"07:00","value":"G1002"},{}]
-
+	
 	// 打印查询条件
 	++pt->m_nGetTicketTimes;
 	pt->AddInfo("确认信息：\r\n出发地: %s 目的地: %s 出发日期：%s 出发时间：%s - %s\r\n"
@@ -837,13 +856,9 @@ while (pt->m_bRunning)
 		, (strseattext.empty() ? "有座" : strseattext.c_str())
 		, pt->m_nGetTicketTimes);	
 
-
 	strtmp = str_format("/otn/leftTicket/query?leftTicketDTO.train_date=%s&leftTicketDTO.from_station=%s&leftTicketDTO.to_station=%s&purpose_codes=%s"
 		, startdate.c_str(), startcitycode.c_str(), endcitycode.c_str(), includeStudent.c_str());
 	iret = creq->http_get(strtmp, strack);	
-	
-	pt->m_listTicket.DeleteAllItems();
-	pt->m_listTicket.ShowScrollBar(SB_VERT, FALSE);
 
 	if (strack.empty())
 	{
@@ -858,32 +873,7 @@ while (pt->m_bRunning)
 		continue;
 	}
 
-	// 后续处理异常
-	/*if (strack == "-10")
-	{
-		// 重新登陆
-		AfxMessageBox("您还没有登录或者离开页面的时间过长，请登录系统或者刷新页面");
-		pt->alertexit();
-	}
-	if (strack == "-1")
-	{
-		AfxMessageBox("服务器忙，加载查询数据失败！");	
-		continue;
-	}
-	else if (strack.substr(0, 2) == "-2")
-	{
-		pt->AddInfo(strack.substr(3).c_str());
-		write_to_file(strerrorfile, strack);
-		continue;
-	}
-	else
-	{
-		strack = str_replace(strack, "&nbsp;", "");
-		strack = str_replace(strack, "<br>", ",");
-	}*/
-
 	// 正常流程
-	QUERY_DATA_LIST stqtrains;
 	memset(&stqtrains, 0, sizeof(stqtrains));
 	jlist = jvalue["data"];
 	if (jlist.isArray())
@@ -939,36 +929,14 @@ while (pt->m_bRunning)
 			{
 				stqtrains.stlist[j].bsubmit = 1;
 				strncpy(stqtrains.stlist[j].szsubmitcode, (jlist[i]["secretStr"]).asCString(), SUBMIT_CODE_LEN);
-			}
-
-			pt->m_listTicket.InsertItem(j, stqtrains.stlist[j].sztrain_no);
-			pt->m_listTicket.SetItemText(j, 1, str_format("%s%-6s(%s)", stqtrains.stlist[j].bstart ? "Y " : "  "
-				, stqtrains.stlist[j].szstartcity, stqtrains.stlist[j].szstarttime).c_str());
-			pt->m_listTicket.SetItemText(j, 2, str_format("%s%-6s(%s)", stqtrains.stlist[j].bend ? "Y " : "  "
-				, stqtrains.stlist[j].szendcity, stqtrains.stlist[j].szendtime).c_str());
-			pt->m_listTicket.SetItemText(j, 3, stqtrains.stlist[j].szusetime);
-			for (n = 0; n < TRAIN_TICKET_TYPE; ++n)
-			{
-				pt->m_listTicket.SetItemText(j, 3 + n + 1, stqtrains.stlist[j].szTicket[n]);
-			}
-			pt->m_listTicket.SetItemText(j, 3 + n + 1, stqtrains.stlist[j].bsubmit ? "Y" : "N");			
+			}			
 			
 			++stqtrains.uscount;
 			++j;
 		}
 
 		pt->AddInfo("共查询到%d车次", stqtrains.uscount);
-	}
-	// 显示滚动条
-	if (stqtrains.uscount > MAX_TICKET_LENGTHS)
-	{
-		pt->m_listTicket.ShowScrollBar(SB_VERT, TRUE);
-	}	
-		
-	/*if (1)
-	{
-		continue;
-	}*/
+	}		
 	
 	if (pt->m_bRunning == FALSE)
 	{
@@ -980,6 +948,9 @@ while (pt->m_bRunning)
 	if (stqtrains.uscount > 0)
 	{
 		// 筛选指定车次：优先可订票、其次车次(完全匹配转大写)
+		memset(&pt->m_stqtrains, 0, sizeof(pt->m_stqtrains)); // 未锁
+		memcpy(&pt->m_stqtrains, &stqtrains, sizeof(stqtrains));
+
 		for (i = 0; i < stqtrains.uscount; ++i)
 		{
 			if (!stqtrains.stlist[i].bsubmit)
@@ -1020,11 +991,7 @@ while (pt->m_bRunning)
 					}
 					
 					// 自动提交
-					// 输入验证码			
-					string strpassenger;
-					string stroldpassenger;
-					time_t tm_current = time(NULL);
-					time_t tm_space = tm_current;
+					// 输入验证码		
 					string seattype = stqtrains.stlist[i].sztrain_no[0] == 'D' ? pszdseattype[usselseat] : pszseattype[usselseat];
 
 					strpassenger = str_format("%s,0,%d,%s,%s,%s,%s,Y"
@@ -1042,13 +1009,14 @@ while (pt->m_bRunning)
 							, CHandleCode::GBKToUTF8(strpassenger).c_str()
 							, CHandleCode::GBKToUTF8(stroldpassenger).c_str());
 					strack = "";
+					pt->AddInfo("自动订票请求...");
 					while (strack.empty())
 					{			
 						creq->http_post("/otn/confirmPassenger/autoSubmitOrderRequest", strtmp, strack);
 					}
 					if (!jread.parse(strack, jvalue))
 					{
-						pt->AddInfo("自动订票请求失败");
+						pt->AddInfo("自动订票请求失败: %s", strack.c_str());
 						continue;
 					}
 
@@ -1067,8 +1035,7 @@ while (pt->m_bRunning)
 						continue;
 					}
 
-					string strtriandate;
-					vector<string> VecTok;
+					VecTok.clear();
 					str_explode(strtoken, "#", VecTok);
 						
 					// train_date=Wed+Jan+8+17%3A33%3A21+UTC%2B0800+2014&
@@ -1077,6 +1044,7 @@ while (pt->m_bRunning)
 						, pt->Gettrain_date(startdate.c_str()), stqtrains.stlist[i].sztrain_nos, stqtrains.stlist[i].sztrain_no, seattype.c_str()
 						, startcitycode.c_str(), endcitycode.c_str(), VecTok[2].c_str(), includeStudent);
 					strack = "";
+					pt->AddInfo("请求票务...");
 					while (strack.empty())
 					{
 						creq->http_post("/otn/confirmPassenger/getQueueCountAsync", strtmp, strack);
@@ -1093,7 +1061,6 @@ while (pt->m_bRunning)
 						break;
 					}
 					
-					tm_space = time(NULL);
 					icount = 0;
 					do
 					{	
@@ -1102,6 +1069,11 @@ while (pt->m_bRunning)
 						if (strrandcode.empty())
 						{
 							pt->OnBtnRcode(); // 获取验证码
+							WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
+						}
+						else if (::IsWindowEnabled(pt->GetDlgItem(IDC_EDIT_RCODE)->m_hWnd))
+						{
+							pt->AddInfo("输入验证码...");
 							WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
 						}
 						
@@ -1113,6 +1085,7 @@ while (pt->m_bRunning)
 						
 						// 效验验证码
 						strack = "";
+						pt->AddInfo("验证验证码...");
 						while (strack.empty())
 						{
 							strtmp = str_format("randCode=%s&rand=sjrand&_json_att=", strrandcode.c_str());
@@ -1131,6 +1104,7 @@ while (pt->m_bRunning)
 						, pt->m_strRCode, includeStudent.c_str(), VecTok[1].c_str()
 						, strticket.c_str(), VecTok[0].c_str());
 					strack = ""; //write_to_file(g_strapppath + "\\post_confirmSingleForQueueAsys.txt", strtmp);
+					pt->AddInfo("提交订单...");
 					while (strack.empty())
 					{
 						creq->http_post("/otn/confirmPassenger/confirmSingleForQueueAsys", strtmp, strack);
@@ -1145,6 +1119,7 @@ while (pt->m_bRunning)
 					// /otn/confirmPassenger/queryOrderWaitTime?random=1389173606758&tourFlag=dc&_json_att= 
 					strack = "";
 					SYSTEMTIME st;
+					pt->AddInfo("查询订单...");
 					while (strack.empty())
 					{
 						GetLocalTime(&st);
@@ -1177,11 +1152,12 @@ while (pt->m_bRunning)
 					// /otn/confirmPassenger/resultOrderForDcQueue
 					strtmp = str_format("orderSequence_no=%s&_json_att=", jvalue["data"]["orderId"].asCString());
 					strack = "";
+					pt->AddInfo("查询出票...");
 					while (strack.empty())
 					{
 						creq->http_post("/otn/confirmPassenger/resultOrderForDcQueue", strtmp, strack);
 					}
-					if (!jread.parse(strack, jvalue) || !jvalue["submitStatus"].asBool())
+					if (!jread.parse(strack, jvalue) || !jvalue["data"]["submitStatus"].asBool())
 					{
 						pt->AddInfo("订票失败：%s", getmidstr(strack, "messages\":[", "],").c_str());
 						continue;
@@ -1193,174 +1169,6 @@ while (pt->m_bRunning)
 		}
 		if (i != stqtrains.uscount)
 		{
-			// 自动提交
-			// 输入验证码			
-			/*string strpassenger;
-			string stroldpassenger;
-			time_t tm_current = time(NULL);
-			time_t tm_space = tm_current;
-			string seattype = stqtrains.stlist[i].sztrain_no[0] == 'D' ? pszdseattype[usselseat] : pszseattype[usselseat];
-
-			strpassenger = str_format("%s,0,%d,%s,%s,%s,%s,Y"
-				, seattype.c_str(), pt->m_nTicketType, pt->m_strName, "1", pt->m_strVerifyCode, pt->m_strMobile);
-			stroldpassenger = str_format("%s,%s,%s,1"
-				,  pt->m_strName, "1", pt->m_strVerifyCode); // 1: 证件类型：身份证
-
-			strtmp = str_format("secretStr=%s&train_date=%s&tour_flag=dc&purpose_codes=%s"
-					"&query_from_station_name=%s&query_to_station_name=%s&&cancel_flag=2"
-					"&bed_level_order_num=000000000000000000000000000000"
-					"&passengerTicketStr=%s"
-					"&oldPassengerStr=%s_"
-					, stqtrains.stlist[i].szsubmitcode, startdate.c_str(), includeStudent.c_str()
-					, startcity.c_str(), endcity.c_str()
-					, CHandleCode::GBKToUTF8(strpassenger).c_str()
-					, CHandleCode::GBKToUTF8(stroldpassenger).c_str());
-			strack = "";
-			while (strack.empty())
-			{			
-				creq->http_post("/otn/confirmPassenger/autoSubmitOrderRequest", strtmp, strack);
-			}
-			if (!jread.parse(strack, jvalue))
-			{
-				pt->AddInfo("自动订票请求失败");
-				continue;
-			}
-
-			if (!jvalue["data"].isNull() && !jvalue["data"]["result"].isNull())
-			{
-				strtoken = jvalue["data"]["result"].asString();
-			}
-			if (strtoken.empty())
-			{
-				pt->AddInfo("自动订票请求返回数据异常: %s", (strack = getmidstr(strack, "messages\":[", "],")).c_str());
-				if (strack.find("未完成") != string::npos)
-				{
-					AfxMessageBox(strack.c_str());
-					break;
-				}
-				continue;
-			}
-
-			string strtriandate;
-			vector<string> VecTok;
-			str_explode(strtoken, "#", VecTok);
-				
-			// train_date=Wed+Jan+8+17%3A33%3A21+UTC%2B0800+2014&
-			strtmp = str_format("train_date=%s&train_no=%s&stationTrainCode=%s&seatType=%s"
-				"&fromStationTelecode=%s&toStationTelecode=%s&leftTicket=%s&purpose_codes=%s&_json_att="
-				, pt->Gettrain_date(startdate.c_str()), stqtrains.stlist[i].sztrain_nos, stqtrains.stlist[i].sztrain_no, seattype.c_str()
-				, startcitycode.c_str(), endcitycode.c_str(), VecTok[2].c_str(), includeStudent);
-			strack = "";
-			while (strack.empty())
-			{
-				creq->http_post("/otn/confirmPassenger/getQueueCountAsync", strtmp, strack);
-			}
-			string strticket = getmidstr(strack, "\"ticket\":\"", "\"");
-			if (strticket.empty())
-			{
-				pt->AddInfo("请求票务失败: %s", getmidstr(strack, "messages\":[", "],").c_str());
-				continue;
-			}
-			
-			if (pt->m_bRunning == FALSE)
-			{
-				break;
-			}
-			
-			tm_space = time(NULL);
-			icount = 0;
-			do
-			{	
-				++icount > 1 ? pt->AddInfo("验证码错误，请重新输入") : "";
-				
-				if (strrandcode.empty())
-				{
-					pt->OnBtnRcode(); // 获取验证码
-					WaitForSingleObject(pt->m_hdWaitCode, INFINITE);
-				}
-				
-				if (!pt->m_bRunning) // 此票不满意，重新刷票，需要退出线程
-				{
-					pt->AddInfo("退出刷票");
-					return 0;
-				}
-				
-				// 效验验证码
-				strack = "";
-				while (strack.empty())
-				{
-					strtmp = str_format("randCode=%s&rand=sjrand&_json_att=", strrandcode.c_str());
-					creq->http_post("/otn/passcodeNew/checkRandCodeAnsyn", strtmp, strack);
-					_sleep(10);
-				}
-				pt->m_strRCode = strrandcode.c_str();
-				strrandcode = "";
-			}while (strack.find("\"data\":\"Y\"") == string::npos);
-
-			// /otn/confirmPassenger/confirmSingleForQueueAsys
-			strtmp = str_format("passengerTicketStr=%s&oldPassengerStr=%s_"
-				"&randCode=%s&purpose_codes=%s&key_check_isChange=%s"
-				"&leftTicketStr=%s&train_location=%s&_json_att="
-				, CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(strpassenger)).c_str(), CHandleCode::UrlEncode(CHandleCode::GBKToUTF8(stroldpassenger)).c_str()
-				, pt->m_strRCode, includeStudent.c_str(), VecTok[1].c_str()
-				, strticket.c_str(), VecTok[0].c_str());
-			strack = ""; write_to_file(g_strapppath + "\\post_confirmSingleForQueueAsys.txt", strtmp);
-			while (strack.empty())
-			{
-				creq->http_post("/otn/confirmPassenger/confirmSingleForQueueAsys", strtmp, strack);
-			}
-			
-			if (!jread.parse(strack, jvalue) || !jvalue["data"]["submitStatus"].asBool())
-			{
-				pt->AddInfo("不能提交：%s", getmidstr(strack, "errMsg\":\"", "\"").c_str());
-				continue;
-			}
-
-			// /otn/confirmPassenger/queryOrderWaitTime?random=1389173606758&tourFlag=dc&_json_att= 
-			strack = "";
-			SYSTEMTIME st;
-			while (strack.empty())
-			{
-				GetLocalTime(&st);
-				creq->http_get(str_format("/otn/confirmPassenger/queryOrderWaitTime?random=%u%u&tourFlag=dc&_json_att="
-					, time(NULL), st.wMilliseconds), strack);
-				if (jread.parse(strack, jvalue))
-				{					
-					if (!jvalue["data"]["orderId"].isNull())
-					{
-						strack = "";
-						break;
-					}
-					else
-					{
-						strack = "";
-					}
-					if (!jvalue["validateMessages"].asString().empty())
-					{
-						pt->AddInfo("查询等待：%s", getmidstr(strack, "messages\":[", "],").c_str());
-						break;
-					}					
-				}
-			}
-			if (!strack.empty())
-			{
-				pt->AddInfo("查询等待失败：%s", getmidstr(strack, "messages\":[", "],").c_str());
-				continue;
-			}
-
-			// /otn/confirmPassenger/resultOrderForDcQueue
-			strtmp = str_format("orderSequence_no=%s&_json_att=", jvalue["data"]["orderId"].asCString());
-			strack = "";
-			while (strack.empty())
-			{
-				creq->http_post("/otn/confirmPassenger/resultOrderForDcQueue", strtmp, strack);
-			}
-			if (!jread.parse(strack, jvalue) || !jvalue["submitStatus"].asBool())
-			{
-				pt->AddInfo("订票失败：%s", getmidstr(strack, "messages\":[", "],").c_str());
-				continue;
-			}*/
-
 			pt->AddInfo("订票成功，请登陆网站及时支付！");
 			pt->alertexit();
 
@@ -1419,25 +1227,24 @@ while (pt->m_bRunning)
 		}
 		else
 		{
-			pt->AddInfo("未查询到所需车票，%us后继续查询", pt->m_uiTmGetTicket);
+			pt->AddInfo("未查询到所需车票，%u毫秒后继续查询", pt->m_uiTmGetTicket);
 		}
 	}
 	else
 	{
-		pt->AddInfo("未查询到任何车次，请确认填信息是否正确，5s后继续查询");
+		pt->AddInfo("未查询到任何车次，请确认填信息是否正确，%u毫秒后继续查询", pt->m_uiTmGetTicket);
 	}	
+}
+}catch(...)
+{
+	pt->AddInfo("异常退出，请查看日志");
 }
 	pt->AddInfo("退出查询");
 	return 0;
 }
 
-void CGetTicketDlg::OnBtnRcode() 
+void CGetTicketDlg::OnGetRanCodeImg() // 获取图片
 {
-	// TODO: Add your control notification handler code here
-	/*if (!m_bRunning)
-	{
-		return;
-	}*/
 	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("加载中");
 	GetDlgItem(IDC_EDIT_RCODE)->EnableWindow(FALSE); // 无法输入
 	m_cbtn.EnableWindow(FALSE); // 无法点击	
@@ -1446,7 +1253,7 @@ void CGetTicketDlg::OnBtnRcode()
 	{
 		if (bget = creq->GetVertifyImg(pszautoimgpath, strRCodePath))
 		{
-			AddInfo("获取验证码成功：请输入验证码！");			
+			AddInfo("输入验证码...");			
 			break;
 		}					
 	}while(!bget);	
@@ -1456,13 +1263,61 @@ void CGetTicketDlg::OnBtnRcode()
 	GetDlgItem(IDC_EDIT_RCODE)->SetWindowText("");	
 	ShowWindow(SW_SHOWNORMAL);
 	SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-	SetTimer(1, 10, NULL);
+	SetTimer(1, 1000, NULL);
+}
+
+UINT CGetTicketDlg::ThreadGetRandCodeImg(LPVOID lpVoid)
+{
+	CGetTicketDlg* pThis = (CGetTicketDlg* )lpVoid;
+	pThis->OnGetRanCodeImg();
+	return 0;
+}
+
+void CGetTicketDlg::OnBtnRcode() 
+{
+	// TODO: Add your control notification handler code here	
+	AfxBeginThread(ThreadGetRandCodeImg, this);
 }
 
 void CGetTicketDlg::OnTimer(UINT nIDEvent) 
 {
-	KillTimer(1);
-	GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
+	if (nIDEvent == 1)
+	{
+		KillTimer(1);
+		GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
+		SetWindowPos(&CWnd::wndNoTopMost, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	}
+	else if (nIDEvent == 2)
+	{
+		// 刷新查询数据：
+		/************************************************************************/
+		// 数据显示：定时显示减少CPU消耗
+		int j, n;
+		SetWindowText(str_format("订票工具 -- 第%d次查询", m_nGetTicketTimes).c_str());
+		m_listTicket.DeleteAllItems();
+		m_listTicket.ShowScrollBar(SB_VERT, FALSE);
+		for (j = 0; j < m_stqtrains.uscount; ++j)
+		{
+			m_listTicket.InsertItem(j, m_stqtrains.stlist[j].sztrain_no);
+			m_listTicket.SetItemText(j, 1, str_format("%s%-6s(%s)", m_stqtrains.stlist[j].bstart ? "Y " : "  "
+				, m_stqtrains.stlist[j].szstartcity, m_stqtrains.stlist[j].szstarttime).c_str());
+			m_listTicket.SetItemText(j, 2, str_format("%s%-6s(%s)", m_stqtrains.stlist[j].bend ? "Y " : "  "
+				, m_stqtrains.stlist[j].szendcity, m_stqtrains.stlist[j].szendtime).c_str());
+			m_listTicket.SetItemText(j, 3, m_stqtrains.stlist[j].szusetime);
+			for (n = 0; n < TRAIN_TICKET_TYPE; ++n)
+			{
+				m_listTicket.SetItemText(j, 3 + n + 1, m_stqtrains.stlist[j].szTicket[n]);
+			}
+			m_listTicket.SetItemText(j, 3 + n + 1, m_stqtrains.stlist[j].bsubmit ? "Y" : "N");
+		}
+		// 显示滚动条
+		if (j > MAX_TICKET_LENGTHS)
+		{
+			m_listTicket.ShowScrollBar(SB_VERT, TRUE);
+		}
+		/************************************************************************/
+	}
+
 	CDialog::OnTimer(nIDEvent);
 }
 
@@ -1480,13 +1335,17 @@ void CGetTicketDlg::OnBtnGetticket()
 	//if (m_bRunning)
 	{
 		// 检查验证码：先输入
-		// 效验验证码
 		string strack = "";
 		string strtmp;
 		int icount = 0;
 		do
-		{
-			++icount > 1 ? OnBtnRcode() : AddInfo("预先输入验证码操作");
+		{			
+			if (++icount > 1)
+			{
+				AddInfo("验证码有误.");
+				SetDlgItemText(IDC_EDIT_RCODE, "");
+				return;
+			}
 			strtmp = str_format("randCode=%s&rand=sjrand&_json_att=", m_strRCode);
 			while (strack.empty())
 			{				
@@ -1500,8 +1359,14 @@ void CGetTicketDlg::OnBtnGetticket()
 	if (m_bRunning)
 	{
 		SetEvent(m_hdWaitCode);
-	}
-	
+	}	
+}
+
+UINT CGetTicketDlg::ThreadCheckRanCode(LPVOID lpVoid)
+{
+	CGetTicketDlg* pThis = (CGetTicketDlg* )lpVoid;
+	pThis->OnBtnGetticket();
+	return 0;
 }
 
 void CGetTicketDlg::OnChangeEditRcode() 
@@ -1515,7 +1380,8 @@ void CGetTicketDlg::OnChangeEditRcode()
 	GetDlgItemText(IDC_EDIT_RCODE, m_strRCode);
 	if (m_strRCode.GetLength() == 4)
 	{
-		OnBtnGetticket();
+		//OnBtnGetticket();
+		AfxBeginThread(ThreadCheckRanCode, this);
 	}
 }
 
@@ -1580,6 +1446,19 @@ CString CGetTicketDlg::Gettrain_date(const char* pszdate)
 
 /************************************************************************/
 
+void CGetTicketDlg::OnLoginOut()
+{
+	CMemory_Conf::instance()->write_conf_str("配置", "Cookie", "");
+	char szfileconn[4096 + 1] = {0};
+	int iconn = 4096;
+	CEncrypt_Data ce;
+	CMemory_Conf::instance()->get_str(szfileconn, iconn);
+	ce.encode(szfileconn, strlen(szfileconn), szfileconn, &iconn);
+	ce.save(strinifile.c_str(), szfileconn, iconn);
+	
+	SendMessage(WM_CLOSE);
+}
+
 void CGetTicketDlg::OnClose() 
 {
 	// TODO: Add your message handler code here and/or call default
@@ -1604,7 +1483,34 @@ void CGetTicketDlg::OnCheckTrainNo()
 			m_strTrainNo += "#";
 		}
 	}
-	trainCodeText = m_strTrainNo;
 	m_trainlist.m_strMatchRedColor = m_strTrainNo;
-	SetDlgItemText(IDC_EDIT_TRANSNO, m_strTrainNo.Mid(1, m_strTrainNo.GetLength() - 1));
+	trainCodeText = m_strTrainNo.Mid(1, m_strTrainNo.GetLength() - 2);
+	SetDlgItemText(IDC_EDIT_TRANSNO, trainCodeText.c_str());
+	if (!trainCodeText.empty())
+	{
+		trainCodeText = "#" + trainCodeText;
+		trainCodeText += "#";
+	}
+}
+
+void CGetTicketDlg::OnCheckTrainType() 
+{
+	// TODO: Add your control notification handler code here
+	// 车型
+	m_strTrainType = "#";
+	for (int i = 0; i < 5; ++i)
+	{
+		if (((CButton* )GetDlgItem(IDC_CHECK1 + i))->GetCheck())
+		{
+			m_strTrainType += psztrain_type[i];
+			m_strTrainType += "#";
+		}
+	}
+	m_strTrainType = m_strTrainType.Mid(1, m_strTrainType.GetLength() - 2);
+}
+
+void CGetTicketDlg::OnNotShowLog() 
+{
+	// TODO: Add your control notification handler code here
+	m_bNotShowLog = ((CButton* )GetDlgItem(IDC_CHECK21))->GetCheck();
 }

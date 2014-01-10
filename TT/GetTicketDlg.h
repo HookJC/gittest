@@ -25,6 +25,9 @@ public:
 
 	void alertexit();
 
+	// 查询数据集存储
+	QUERY_DATA_LIST m_stqtrains;
+
 // Dialog Data
 	//{{AFX_DATA(CGetTicketDlg)
 	enum { IDD = IDD_GETTICKET_DIALOG };
@@ -46,6 +49,7 @@ public:
 	UINT	m_uiTmSubmitTicket;
 	CString	m_strStartTime;
 	CString	m_strEndTime;
+	BOOL	m_bNotShowLog;
 	//}}AFX_DATA
 
 	// ClassWizard generated virtual function overrides
@@ -56,7 +60,7 @@ public:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 	//}}AFX_VIRTUAL
 
-public:	
+public:
 	void AddInfo(const char* fmt, ...);
 	
 	BOOL m_bGetPassenger;
@@ -68,6 +72,12 @@ public:
 	static UINT GetTickets(LPVOID lpVoid);
 
 	CString m_strTrainType;
+
+	void OnBtnGetticket(); // 验证验证码
+	static UINT ThreadCheckRanCode(LPVOID lpVoid);
+
+	void OnGetRanCodeImg(); // 获取图片
+	static UINT ThreadGetRandCodeImg(LPVOID lpVoid);
 
 /************************************************************************/
 // 临时方法
@@ -100,11 +110,13 @@ protected:
 	afx_msg void OnBtnRunning();
 	afx_msg void OnBtnRcode();
 	afx_msg void OnTimer(UINT nIDEvent);
-	afx_msg void OnBtnGetticket();
+	afx_msg void OnLoginOut();
 	afx_msg void OnChangeEditRcode();
 	afx_msg void OnBtnRefpassenger();
 	afx_msg void OnClose();
 	afx_msg void OnCheckTrainNo();
+	afx_msg void OnCheckTrainType();
+	afx_msg void OnNotShowLog();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
