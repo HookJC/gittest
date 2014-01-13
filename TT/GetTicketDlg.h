@@ -120,6 +120,7 @@ protected:
 	afx_msg void OnCheckTrainType();
 	afx_msg void OnNotShowLog();
 	afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
+	afx_msg void OnSelendStartDateChange();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

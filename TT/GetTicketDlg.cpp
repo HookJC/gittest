@@ -270,6 +270,7 @@ BEGIN_MESSAGE_MAP(CGetTicketDlg, CDialog)
 	ON_BN_CLICKED(IDC_CHECK6, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK1, OnCheckTrainType)
 	ON_BN_CLICKED(IDC_CHECK21, OnNotShowLog)
+	ON_WM_ACTIVATE()
 	ON_BN_CLICKED(IDC_CHECK7, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK8, OnCheckTrainNo)
 	ON_BN_CLICKED(IDC_CHECK9, OnCheckTrainNo)
@@ -278,7 +279,7 @@ BEGIN_MESSAGE_MAP(CGetTicketDlg, CDialog)
 	ON_BN_CLICKED(IDC_CHECK3, OnCheckTrainType)
 	ON_BN_CLICKED(IDC_CHECK4, OnCheckTrainType)
 	ON_BN_CLICKED(IDC_CHECK5, OnCheckTrainType)
-	ON_WM_ACTIVATE()
+	ON_CBN_SELENDCANCEL(IDC_COMBO_STARTDATE, OnSelendStartDateChange)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -829,6 +830,9 @@ UINT CGetTicketDlg::GetTickets(LPVOID lpVoid)
 	QUERY_DATA_LIST stqtrains;
 	string strtriandate;
 	vector<string> VecTok;
+	int idate = 0;
+	CString strSelDate;
+	CButton* btn;
 
 	CGetTicketDlg* pt = (CGetTicketDlg* )lpVoid;
 try{	
@@ -843,6 +847,25 @@ while (pt->m_bRunning)
 		break;
 	}
 		// TODO: Add your message handler code here and/or call default
+
+	// 轮循日期	
+	strSelDate.Empty();
+	for (i = idate; i < 5; ++i)
+	{
+		btn = (CButton* )pt->GetDlgItem(IDC_CHECK11 + i);
+		if (btn->GetCheck())
+		{
+			btn->GetWindowText(strSelDate);
+			startdate = str_format("%s", strSelDate);
+			break;
+		}
+	}
+	if (strSelDate.IsEmpty())
+	{
+		startdate = str_format("%s", pt->m_strStartDate);
+	}
+	idate >= 4 ? idate = 0 : ++idate;
+	pt->SetDlgItemText(IDC_STATIC_DATE, startdate.c_str());
 	
 	// 打印查询条件
 	++pt->m_nGetTicketTimes;
@@ -1284,7 +1307,8 @@ UINT CGetTicketDlg::ThreadGetRandCodeImg(LPVOID lpVoid)
 
 void CGetTicketDlg::OnBtnRcode() 
 {
-	// TODO: Add your control notification handler code here	
+	// TODO: Add your control notification handler code here
+	strrandcode = "test";
 	AfxBeginThread(ThreadGetRandCodeImg, this);	
 }
 
@@ -1556,4 +1580,44 @@ void CGetTicketDlg::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized)
 		GetDlgItem(IDC_EDIT_RCODE)->SetFocus();
 	}
 	
+}
+
+void CGetTicketDlg::OnSelendStartDateChange() 
+{
+	// TODO: Add your control notification handler code here
+	CString strSelTxt;
+	GetDlgItem(IDC_COMBO_STARTDATE)->GetWindowText(strSelTxt);
+	
+	// 查找是否已经存在
+	CString strTmp;
+	for (int i = 0; i < 5; ++i)
+	{
+		GetDlgItem(IDC_CHECK11 + i)->GetWindowText(strTmp);
+		if (strTmp.Compare(strSelTxt) == 0)
+		{
+			((CButton*)GetDlgItem(IDC_CHECK11 + i))->SetCheck(TRUE);
+			return;
+		}
+	}
+
+	// 后面添加
+	static int selcitycount = 0;
+	if (selcitycount >= 5)
+	{
+		// 后移
+		for (i = 1; i < 5; ++i)
+		{
+			GetDlgItem(IDC_CHECK11 + (i - 1))->GetWindowText(strTmp);
+			GetDlgItem(IDC_CHECK11 + i)->SetWindowText(strTmp);
+		}
+		GetDlgItem(IDC_CHECK11)->SetWindowText(strSelTxt);
+	}
+	else
+	{
+		GetDlgItem(IDC_CHECK11 + (selcitycount % 5))->SetWindowText(strSelTxt);
+		((CButton*)GetDlgItem(IDC_CHECK11 + (selcitycount % 5)))->ShowWindow(SW_SHOW);
+		((CButton*)GetDlgItem(IDC_CHECK11 + (selcitycount % 5)))->SetCheck(TRUE);
+	}
+	
+	++selcitycount;
 }
